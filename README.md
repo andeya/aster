@@ -8,5 +8,5 @@ Under development, not for production...
 
 ## Feature
 
-- Convert the abstract syntax tree to a `reflect.Type`-like type
+- Convert the abstract syntax tree to a `reflect.Type`-like types
 - ...
