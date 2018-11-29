@@ -159,6 +159,8 @@ type Type interface {
 	// It panics if i is not in the range [0, NumOut()).
 	Out(i int) Type
 
+	// Source returns the source code.
+	Source() string
 	// GetDoc returns lead comment.
 	GetDoc() string
 	// GetComment returns line comment.
