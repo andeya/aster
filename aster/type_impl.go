@@ -15,7 +15,9 @@
 package aster
 
 import (
+	"errors"
 	"go/ast"
+	"go/token"
 	"reflect"
 )
 
@@ -23,37 +25,26 @@ import (
 type CommonType struct {
 	ast.Node
 	kind    Kind
-	file    *File
+	pkgName string
 	name    string
 	methods []*Method
-	declDoc *ast.CommentGroup
+	doc     *ast.CommentGroup
 }
 
 var _ Type = (*CommonType)(nil)
 
-func newCommonType(kind Kind) *CommonType {
-	switch kind {
-	case Int,
-		Int8,
-		Int16,
-		Int32,
-		Int64,
-		Uint,
-		Uint8,
-		Uint16,
-		Uint32,
-		Uint64,
-		Uintptr,
-		Float32,
-		Float64,
-		Complex64,
-		Complex128,
-		String,
-		UnsafePointer,
-		Interface:
-		return &CommonType{kind: kind}
+func newCommonType(node ast.Node, kind Kind, name string, pkgName string, doc *ast.CommentGroup) *CommonType {
+	return &CommonType{
+		Node:    node,
+		kind:    kind,
+		pkgName: pkgName,
+		name:    name,
+		doc:     doc,
 	}
-	panic("CommonType must be a number, bool or string type")
+}
+
+func (c *CommonType) addMethods(method ...*Method) {
+	c.methods = append(c.methods, method...)
 }
 
 // Kind returns the specific kind of this type.
@@ -73,10 +64,10 @@ func (c *CommonType) Name() string {
 // guaranteed to be unique among types. To test for type identity,
 // compare the Types directly.
 func (c *CommonType) String() string {
-	if c.file.PkgName == "" {
+	if c.pkgName == "" || c.name == "" {
 		return c.name
 	}
-	return c.file.PkgName + "." + c.name
+	return c.pkgName + "." + c.name
 }
 
 // Method returns the i'th method in the type's method set.
@@ -143,26 +134,30 @@ func (c *CommonType) Implements(u Type) bool {
 
 // Doc returns lead comment.
 func (c *CommonType) Doc() string {
-	if c.declDoc == nil {
+	if c.doc == nil {
 		return ""
 	}
-	return c.declDoc.Text()
+	return c.doc.Text()
 }
 
 // SetDoc sets lead comment.
-func (c *CommonType) SetDoc(text string) {
-	c.declDoc = &ast.CommentGroup{
+func (c *CommonType) SetDoc(text string) error {
+	if c.Name() == "" {
+		return errors.New("anonymous type cannot set document")
+	}
+	c.doc = &ast.CommentGroup{
 		List: []*ast.Comment{{Text: text}},
 	}
+	return nil
 }
 
 // AliasType alias type such as `type T2 = T`
 type AliasType struct {
 	Type
 	ast.Node
-	file    *File
-	name    string
-	declDoc *ast.CommentGroup
+	file *File
+	name string
+	doc  *ast.CommentGroup
 }
 
 // Name returns the type's name within its package for a defined type.
@@ -185,15 +180,15 @@ func (a *AliasType) String() string {
 
 // Doc returns lead comment.
 func (a *AliasType) Doc() string {
-	if a.declDoc == nil {
+	if a.doc == nil {
 		return ""
 	}
-	return a.declDoc.Text()
+	return a.doc.Text()
 }
 
 // SetDoc sets lead comment.
 func (a *AliasType) SetDoc(text string) {
-	a.declDoc = &ast.CommentGroup{
+	a.doc = &ast.CommentGroup{
 		List: []*ast.Comment{{Text: text}},
 	}
 }
@@ -220,11 +215,13 @@ type PtrType struct {
 }
 
 func newPtrType(t Type) *PtrType {
-	return &PtrType{t}
+	return &PtrType{
+		Type: t,
+	}
 }
 
 // Kind returns the specific kind of this type.
-func (*PtrType) Kind() Kind {
+func (p *PtrType) Kind() Kind {
 	return Ptr
 }
 
@@ -375,6 +372,16 @@ type StructType struct {
 	fields []*StructField // sorted by offset
 }
 
+func newStructType(node ast.Node, name string, pkgName string, doc *ast.CommentGroup) *StructType {
+	return &StructType{
+		CommonType: newCommonType(node, Struct, name, pkgName, doc),
+	}
+}
+
+func (s *StructType) addFields(field ...*StructField) {
+	s.fields = append(s.fields, field...)
+}
+
 // A StructField describes a single field in a struct.
 type StructField struct {
 	Name      string    // the field name
@@ -420,4 +427,82 @@ func (s *StructType) FieldByName(name string) (field *StructField, found bool) {
 		}
 	}
 	return nil, false
+}
+
+// basic types
+var (
+	BasicBool          Type = newCommonType(nilNode, Bool, "bool", "", nil)
+	BasicInt           Type = newCommonType(nilNode, Int, "int", "", nil)
+	BasicInt8          Type = newCommonType(nilNode, Int8, "int8", "", nil)
+	BasicInt16         Type = newCommonType(nilNode, Int16, "int16", "", nil)
+	BasicInt32         Type = newCommonType(nilNode, Int32, "int32", "", nil)
+	BasicInt64         Type = newCommonType(nilNode, Int64, "int64", "", nil)
+	BasicUint          Type = newCommonType(nilNode, Uint, "uint", "", nil)
+	BasicUint8         Type = newCommonType(nilNode, Uint8, "uint8", "", nil)
+	BasicUint16        Type = newCommonType(nilNode, Uint16, "uint16", "", nil)
+	BasicUint32        Type = newCommonType(nilNode, Uint32, "uint32", "", nil)
+	BasicUint64        Type = newCommonType(nilNode, Uint64, "uint64", "", nil)
+	BasicUintptr       Type = newCommonType(nilNode, Uintptr, "uintptr", "", nil)
+	BasicFloat32       Type = newCommonType(nilNode, Float32, "float32", "", nil)
+	BasicFloat64       Type = newCommonType(nilNode, Float64, "float64", "", nil)
+	BasicComplex64     Type = newCommonType(nilNode, Complex64, "complex64", "", nil)
+	BasicComplex128    Type = newCommonType(nilNode, Complex128, "complex128", "", nil)
+	BasicString        Type = newCommonType(nilNode, String, "string", "", nil)
+	BasicUnsafePointer Type = newCommonType(nilNode, UnsafePointer, "unsafe.Pointer", "", nil)
+)
+
+var nilNode NilNode
+
+// NilNode nil Node
+type NilNode struct{}
+
+// Pos .
+func (NilNode) Pos() token.Pos { return token.NoPos }
+
+// End .
+func (NilNode) End() token.Pos { return token.NoPos }
+
+func getBasicType(name string) (t Type, found bool) {
+	found = true
+	switch name {
+	case "bool":
+		t = BasicBool
+	case "int":
+		t = BasicInt
+	case "int8":
+		t = BasicInt8
+	case "int16":
+		t = BasicInt16
+	case "int32":
+		t = BasicInt32
+	case "int64":
+		t = BasicInt64
+	case "uint":
+		t = BasicUint
+	case "uint8":
+		t = BasicUint8
+	case "uint16":
+		t = BasicUint16
+	case "uint32":
+		t = BasicUint32
+	case "uint64":
+		t = BasicUint64
+	case "uintptr":
+		t = BasicUintptr
+	case "float32":
+		t = BasicFloat32
+	case "float64":
+		t = BasicFloat64
+	case "complex64":
+		t = BasicComplex64
+	case "complex128":
+		t = BasicComplex128
+	case "string":
+		t = BasicString
+	case "unsafe.Pointer":
+		t = BasicUnsafePointer
+	default:
+		return nil, false
+	}
+	return
 }

@@ -117,6 +117,7 @@ func (f *File) Reparse() (err error) {
 	if file.Name != nil {
 		f.PkgName = file.Name.Name
 	}
+	f.collectTypes()
 	return
 }
 
@@ -139,7 +140,7 @@ func convertPackage(mod *Module, dir string, pkg *ast.Package) *Package {
 
 func convertFile(pkg *Package, filename string, file *ast.File) *File {
 	b, _ := readSource(filename, nil)
-	return &File{
+	f := &File{
 		FileSet:  pkg.FileSet,
 		Filename: filename,
 		PkgName:  pkg.Name,
@@ -148,6 +149,8 @@ func convertFile(pkg *Package, filename string, file *ast.File) *File {
 		mode:     pkg.mode,
 		pkg:      pkg,
 	}
+	f.collectTypes()
+	return f
 }
 
 func readSource(filename string, src interface{}) ([]byte, error) {

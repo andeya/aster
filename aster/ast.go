@@ -72,7 +72,7 @@ type File struct {
 	Filename string
 	Src      []byte
 	mode     parser.Mode
-	Types    map[string]Type
+	Types    map[token.Pos]Type
 	*ast.File
 }
 
@@ -136,19 +136,21 @@ type Type interface {
 	Doc() string
 
 	// SetDoc sets lead comment.
-	SetDoc(string)
+	// NOTE: returns errror if Name==""
+	SetDoc(string) error
+
+	addMethods(method ...*Method)
 }
 
 // Method represents a single method.
 type Method struct {
 	*ast.FuncDecl
 	Name       string // method name
-	Index      int    // index for Type.Method
 	Recv       Type
 	Params     []Type
 	Result     []Type
 	IsVariadic bool
-	Doc        string // lead comment
+	Doc        *ast.CommentGroup // lead comment
 }
 
 // A Kind represents the specific kind of type that a Type represents.

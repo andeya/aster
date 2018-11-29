@@ -14,119 +14,104 @@
 
 package aster
 
-func init() {
+import (
+	"go/ast"
+	"go/token"
+)
+
+func (f *File) collectTypes() {
+	f.Types = make(map[token.Pos]Type)
+	f.collectStructs()
+	f.collectFuncs()
 }
 
-// func pickFuncType(n ast.Node) bool {
-// 	*ast.FuncDecl
-// }
-
-// // collectStructs collects and maps structType nodes to their positions
-// func collectStructs(node ast.Node) map[token.Pos]*structType {
-// 	structs := make(map[token.Pos]*structType, 0)
-// 	collectStructs := func(n ast.Node) bool {
-// 		var t ast.Expr
-// 		var structName string
-
-// 		switch x := n.(type) {
-// 		case *ast.TypeSpec:
-// 			if x.Type == nil {
-// 				return true
-
-// 			}
-
-// 			structName = x.Name.Name
-// 			t = x.Type
-// 		case *ast.CompositeLit:
-// 			t = x.Type
-// 		case *ast.ValueSpec:
-// 			structName = x.Names[0].Name
-// 			t = x.Type
-// 		}
-
-// 		x, ok := t.(*ast.StructType)
-// 		if !ok {
-// 			return true
-// 		}
-
-// 		structs[x.Pos()] = &structType{
-// 			name: structName,
-// 			node: x,
-// 		}
-// 		return true
-// 	}
-// 	ast.Inspect(node, collectStructs)
-// 	return structs
-// }
-
-// // collectStructs collects and maps structType nodes to their positions
-// func (t *tplInfo) collectStructs() {
-// 	collectStructs := func(n ast.Node) bool {
+// func collectDecl(f *File) (decls []ast.Decl) {
+// 	ast.Inspect(f.File, func(n ast.Node) bool {
 // 		decl, ok := n.(ast.Decl)
-// 		if !ok {
-// 			return true
-// 		}
-// 		genDecl, ok := decl.(*ast.GenDecl)
-// 		if !ok {
-// 			return true
-// 		}
-// 		var groupDoc string
-// 		if len(genDecl.Specs) == 1 {
-// 			groupDoc = genDecl.Doc.Text()
-// 		}
-// 		for _, spec := range genDecl.Specs {
-// 			var e ast.Expr
-// 			var structName string
-// 			var doc = groupDoc
-
-// 			switch x := spec.(type) {
-// 			case *ast.TypeSpec:
-// 				if x.Type == nil {
-// 					continue
-// 				}
-// 				structName = x.Name.Name
-// 				e = x.Type
-// 				if s := x.Doc.Text(); s != "" {
-// 					doc = x.Doc.Text()
-// 				}
-// 			}
-
-// 			x, ok := e.(*ast.StructType)
-// 			if !ok {
-// 				continue
-// 			}
-
-// 			if len(x.Fields.List) == 0 {
-// 				switch structName {
-// 				case MYSQL_MODEL, MONGO_MODEL:
-// 				default:
-// 					if goutil.IsExportedName(structName) {
-// 						a := &aliasType{
-// 							doc:  addSlash(doc),
-// 							name: structName,
-// 							text: fmt.Sprintf("%s = codec.PbEmpty", structName),
-// 						}
-// 						a.rawTypeName = a.text[strings.LastIndex(strings.TrimSpace(strings.Split(a.text, "//")[0]), " ")+1:]
-// 						if a.doc == "" {
-// 							a.doc = fmt.Sprintf("// %s alias of type %s\n", a.name, a.rawTypeName)
-// 						}
-// 						t.aliasTypes = append(t.aliasTypes, a)
-// 					}
-// 					continue
-// 				}
-// 			}
-
-// 			t.realStructTypes = append(
-// 				t.realStructTypes,
-// 				structType{
-// 					name: structName,
-// 					doc:  addSlash(doc),
-// 					node: x,
-// 				}.init(t),
-// 			)
+// 		if ok {
+// 			decls = append(decls, decl)
 // 		}
 // 		return true
-// 	}
-// 	ast.Inspect(t.astFile, collectStructs)
-// 	t.sortStructs()
+// 	})
+// 	return
 // }
+
+// collectStructs collects and maps structType nodes to their positions
+func (f *File) collectStructs() {
+	collectStructs := func(n ast.Node) bool {
+		switch x := n.(type) {
+		case *ast.CompositeLit:
+			t, ok := x.Type.(*ast.StructType)
+			if !ok {
+				return true
+			}
+			f.Types[x.Pos()] = newStructType(t, "", "", nil)
+		case *ast.GenDecl:
+			var declDoc *ast.CommentGroup
+			if len(x.Specs) == 1 {
+				declDoc = x.Doc
+			}
+			for _, spec := range x.Specs {
+				var t ast.Expr
+				var structName string
+				var doc = declDoc
+				switch x := spec.(type) {
+				case *ast.TypeSpec:
+					if x.Type == nil {
+						continue
+					}
+					structName = x.Name.Name
+					t = x.Type
+				case *ast.ValueSpec:
+					structName = x.Names[0].Name
+					t = x.Type
+				}
+				x, ok := t.(*ast.StructType)
+				if !ok {
+					continue
+				}
+				f.Types[x.Pos()] = newStructType(x, structName, f.PkgName, doc)
+			}
+		}
+		return true
+	}
+	ast.Inspect(f.File, collectStructs)
+	f.collectMethods()
+}
+
+func (f *File) collectMethods() {
+	collectMethods := func(n ast.Node) bool {
+		x, ok := n.(*ast.FuncDecl)
+		if !ok || x.Recv == nil || len(x.Recv.List) == 0 {
+			return true
+		}
+		recvPos := x.Recv.List[0].Type.(*ast.StarExpr).X.(*ast.Ident).Obj.Pos()
+		s, ok := f.Types[recvPos]
+		if !ok {
+			return true
+		}
+		m := &Method{
+			FuncDecl: x,
+			Recv:     s,
+			Name:     x.Name.Name,
+			Doc:      x.Doc,
+			Params:   []Type{},
+			Result:   []Type{},
+		}
+		params := x.Type.Params
+		if num := len(params.List); num > 0 {
+			_, ok := params.List[num-1].Type.(*ast.Ellipsis)
+			if ok {
+				m.IsVariadic = true
+			}
+		}
+		s.addMethods(m)
+		return true
+	}
+	ast.Inspect(f.File, collectMethods)
+}
+
+func (f *File) collectFuncs() {
+	// 	*ast.FuncDecl
+	// *ast.FuncLit
+}
