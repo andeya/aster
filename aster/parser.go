@@ -40,10 +40,10 @@ import (
 //
 func ParseDir(dir string, filter func(os.FileInfo) bool, mode ...parser.Mode) (module *Module, first error) {
 	module = &Module{
-		Fset:   token.NewFileSet(),
-		Dir:    dir,
-		filter: filter,
-		mode:   parser.ParseComments,
+		FileSet: token.NewFileSet(),
+		Dir:     dir,
+		filter:  filter,
+		mode:    parser.ParseComments,
 	}
 	for _, m := range mode {
 		module.mode |= m
@@ -54,7 +54,7 @@ func ParseDir(dir string, filter func(os.FileInfo) bool, mode ...parser.Mode) (m
 
 // Reparse reparses AST.
 func (m *Module) Reparse() (first error) {
-	pkgs, first := parser.ParseDir(m.Fset, m.Dir, m.filter, m.mode)
+	pkgs, first := parser.ParseDir(m.FileSet, m.Dir, m.filter, m.mode)
 	if first != nil {
 		return
 	}
@@ -90,7 +90,7 @@ func ParseFile(filename string, src interface{}, mode ...parser.Mode) (f *File, 
 		return nil, err
 	}
 	f = &File{
-		Fset:     token.NewFileSet(),
+		FileSet:  token.NewFileSet(),
 		Filename: filename,
 		Src:      b,
 		mode:     parser.ParseComments,
@@ -109,7 +109,7 @@ func (f *File) Reparse() (err error) {
 		return err
 	}
 	f.Src = b
-	file, err := parser.ParseFile(f.Fset, f.Filename, b, f.mode)
+	file, err := parser.ParseFile(f.FileSet, f.Filename, b, f.mode)
 	if err != nil {
 		return
 	}
@@ -122,7 +122,7 @@ func (f *File) Reparse() (err error) {
 
 func convertPackage(mod *Module, dir string, pkg *ast.Package) *Package {
 	p := &Package{
-		Fset:    mod.Fset,
+		FileSet: mod.FileSet,
 		Dir:     dir,
 		Name:    pkg.Name,
 		Scope:   pkg.Scope,
@@ -140,7 +140,7 @@ func convertPackage(mod *Module, dir string, pkg *ast.Package) *Package {
 func convertFile(pkg *Package, filename string, file *ast.File) *File {
 	b, _ := readSource(filename, nil)
 	return &File{
-		Fset:     pkg.Fset,
+		FileSet:  pkg.FileSet,
 		Filename: filename,
 		PkgName:  pkg.Name,
 		Src:      b,

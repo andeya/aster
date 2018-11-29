@@ -25,11 +25,11 @@ import (
 
 // Module packages AST
 type Module struct {
-	Fset   *token.FileSet
-	Dir    string
-	filter func(os.FileInfo) bool
-	Pkgs   map[string]*Package
-	mode   parser.Mode
+	FileSet *token.FileSet
+	Dir     string
+	filter  func(os.FileInfo) bool
+	Pkgs    map[string]*Package
+	mode    parser.Mode
 }
 
 // A Package node represents a set of source files
@@ -37,7 +37,7 @@ type Module struct {
 //
 type Package struct {
 	module  *Module // nil when not existed
-	Fset    *token.FileSet
+	FileSet *token.FileSet
 	Dir     string
 	Name    string                 // package name
 	Scope   *ast.Scope             // package scope across all files
@@ -68,7 +68,7 @@ type Package struct {
 type File struct {
 	pkg      *Package // nil when not existed
 	PkgName  string
-	Fset     *token.FileSet
+	FileSet  *token.FileSet
 	Filename string
 	Src      []byte
 	mode     parser.Mode
@@ -131,9 +131,6 @@ type Type interface {
 
 	// Implements reports whether the type implements the interface type u.
 	Implements(u Type) bool
-
-	// // Source returns the source code.
-	// Source() string
 
 	// Doc returns lead comment.
 	Doc() string
