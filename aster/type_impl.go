@@ -17,7 +17,6 @@ package aster
 import (
 	"errors"
 	"go/ast"
-	"go/token"
 	"reflect"
 )
 
@@ -34,6 +33,9 @@ type CommonType struct {
 var _ Type = (*CommonType)(nil)
 
 func newCommonType(node ast.Node, kind Kind, name string, pkgName string, doc *ast.CommentGroup) *CommonType {
+	if node == nil {
+		node = NilNode{}
+	}
 	return &CommonType{
 		Node:    node,
 		kind:    kind,
@@ -431,36 +433,25 @@ func (s *StructType) FieldByName(name string) (field *StructField, found bool) {
 
 // basic types
 var (
-	BasicBool          Type = newCommonType(nilNode, Bool, "bool", "", nil)
-	BasicInt           Type = newCommonType(nilNode, Int, "int", "", nil)
-	BasicInt8          Type = newCommonType(nilNode, Int8, "int8", "", nil)
-	BasicInt16         Type = newCommonType(nilNode, Int16, "int16", "", nil)
-	BasicInt32         Type = newCommonType(nilNode, Int32, "int32", "", nil)
-	BasicInt64         Type = newCommonType(nilNode, Int64, "int64", "", nil)
-	BasicUint          Type = newCommonType(nilNode, Uint, "uint", "", nil)
-	BasicUint8         Type = newCommonType(nilNode, Uint8, "uint8", "", nil)
-	BasicUint16        Type = newCommonType(nilNode, Uint16, "uint16", "", nil)
-	BasicUint32        Type = newCommonType(nilNode, Uint32, "uint32", "", nil)
-	BasicUint64        Type = newCommonType(nilNode, Uint64, "uint64", "", nil)
-	BasicUintptr       Type = newCommonType(nilNode, Uintptr, "uintptr", "", nil)
-	BasicFloat32       Type = newCommonType(nilNode, Float32, "float32", "", nil)
-	BasicFloat64       Type = newCommonType(nilNode, Float64, "float64", "", nil)
-	BasicComplex64     Type = newCommonType(nilNode, Complex64, "complex64", "", nil)
-	BasicComplex128    Type = newCommonType(nilNode, Complex128, "complex128", "", nil)
-	BasicString        Type = newCommonType(nilNode, String, "string", "", nil)
-	BasicUnsafePointer Type = newCommonType(nilNode, UnsafePointer, "unsafe.Pointer", "", nil)
+	BasicBool          Type = newCommonType(nil, Bool, "bool", "", nil)
+	BasicInt           Type = newCommonType(nil, Int, "int", "", nil)
+	BasicInt8          Type = newCommonType(nil, Int8, "int8", "", nil)
+	BasicInt16         Type = newCommonType(nil, Int16, "int16", "", nil)
+	BasicInt32         Type = newCommonType(nil, Int32, "int32", "", nil)
+	BasicInt64         Type = newCommonType(nil, Int64, "int64", "", nil)
+	BasicUint          Type = newCommonType(nil, Uint, "uint", "", nil)
+	BasicUint8         Type = newCommonType(nil, Uint8, "uint8", "", nil)
+	BasicUint16        Type = newCommonType(nil, Uint16, "uint16", "", nil)
+	BasicUint32        Type = newCommonType(nil, Uint32, "uint32", "", nil)
+	BasicUint64        Type = newCommonType(nil, Uint64, "uint64", "", nil)
+	BasicUintptr       Type = newCommonType(nil, Uintptr, "uintptr", "", nil)
+	BasicFloat32       Type = newCommonType(nil, Float32, "float32", "", nil)
+	BasicFloat64       Type = newCommonType(nil, Float64, "float64", "", nil)
+	BasicComplex64     Type = newCommonType(nil, Complex64, "complex64", "", nil)
+	BasicComplex128    Type = newCommonType(nil, Complex128, "complex128", "", nil)
+	BasicString        Type = newCommonType(nil, String, "string", "", nil)
+	BasicUnsafePointer Type = newCommonType(nil, UnsafePointer, "unsafe.Pointer", "", nil)
 )
-
-var nilNode NilNode
-
-// NilNode nil Node
-type NilNode struct{}
-
-// Pos .
-func (NilNode) Pos() token.Pos { return token.NoPos }
-
-// End .
-func (NilNode) End() token.Pos { return token.NoPos }
 
 func getBasicType(name string) (t Type, found bool) {
 	found = true

@@ -191,3 +191,12 @@ const (
 	Struct Kind = reflect.Struct
 	Ptr    Kind = reflect.Ptr
 )
+
+// NilNode nil Node
+type NilNode struct{}
+
+// Pos .
+func (NilNode) Pos() token.Pos { return token.NoPos }
+
+// End .
+func (NilNode) End() token.Pos { return token.NoPos }
