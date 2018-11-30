@@ -117,16 +117,16 @@ func (c *CommonType) Implements(u Type) bool {
 		if !ok ||
 			um.IsVariadic != cm.IsVariadic ||
 			len(um.Params) != len(cm.Params) ||
-			len(um.Result) != len(cm.Result) {
+			len(um.Results) != len(cm.Results) {
 			return false
 		}
 		for k, v := range um.Params {
-			if cm.Params[k].String() != v.String() {
+			if cm.Params[k].TypeName != v.TypeName {
 				return false
 			}
 		}
-		for k, v := range um.Result {
-			if cm.Result[k].String() != v.String() {
+		for k, v := range um.Results {
+			if cm.Results[k].TypeName != v.TypeName {
 				return false
 			}
 		}
@@ -317,8 +317,8 @@ func (c *ChanType) ChanDir() reflect.ChanDir {
 // FuncType function type
 type FuncType struct {
 	*CommonType
-	params     []Type
-	results    []Type
+	params     []*FuncField
+	results    []*FuncField
 	isVariadic bool
 }
 
@@ -348,7 +348,7 @@ func (f *FuncType) NumResult() int {
 }
 
 // Param returns the type of a function type's i'th input parameter.
-func (f *FuncType) Param(i int) (t Type, found bool) {
+func (f *FuncType) Param(i int) (ff *FuncField, found bool) {
 	if i < 0 || i >= len(f.params) {
 		return
 	}
@@ -356,7 +356,7 @@ func (f *FuncType) Param(i int) (t Type, found bool) {
 }
 
 // Result returns the type of a function type's i'th output parameter.
-func (f *FuncType) Result(i int) (t Type, found bool) {
+func (f *FuncType) Result(i int) (ff *FuncField, found bool) {
 	if i < 0 || i >= len(f.results) {
 		return
 	}
@@ -397,7 +397,6 @@ func (s *StructType) addFields(field ...*StructField) {
 // A StructField describes a single field in a struct.
 type StructField struct {
 	Name      string    // the field name
-	Exported  bool      // is upper case (exported) field name or not
 	Type      Type      // field type
 	Tag       StructTag // field tag string
 	Index     []int     // index sequence for Type.FieldByIndex

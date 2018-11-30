@@ -15,8 +15,86 @@
 package aster
 
 import (
+	"bytes"
 	"go/ast"
+	"go/format"
+	"strings"
 )
+
+// LookupImports lookups the import info by package name.
+func (f *File) LookupImports(currPkgName string) (imports []*Import, found bool) {
+	for _, imp := range f.Imports {
+		if imp.Name == currPkgName {
+			imports = append(imports, imp)
+			found = true
+		}
+	}
+	return
+}
+
+// LookupPackages lookups the package object by package name.
+// NOTE: Only lookup the parsed module.
+func (f *File) LookupPackages(currPkgName string) (pkgs []*Package, found bool) {
+	if f.pkg == nil || f.pkg.module == nil {
+		return
+	}
+	imps, found := f.LookupImports(currPkgName)
+	if !found {
+		return
+	}
+	mod := f.pkg.module
+	for _, imp := range imps {
+		if p, ok := mod.Pkgs[imp.Name]; ok {
+			pkgs = append(pkgs, p)
+			found = true
+		}
+	}
+	return
+}
+
+// LookupType lookup Type by type name.
+func (f *File) LookupType(name string) (t Type, found bool) {
+	name = strings.TrimLeft(name, "*")
+	// May be basic type?
+	t, found = getBasicType(name)
+	if found {
+		return
+	}
+	// May be in the current package?
+	if !strings.Contains(name, ".") {
+		if f.pkg == nil {
+			t, found = f.Types[name]
+			if found {
+				return
+			}
+		} else {
+			for _, v := range f.pkg.Files {
+				t, found = v.Types[name]
+				if found {
+					return
+				}
+			}
+		}
+	}
+	// May be in the other module packages?
+	a := strings.SplitN(name, ".", 2)
+	if len(a) == 1 {
+		a = []string{".", name}
+	}
+	pkgs, ok := f.LookupPackages(a[0])
+	if !ok {
+		return
+	}
+	for _, p := range pkgs {
+		for _, v := range p.Files {
+			t, found = v.Types[a[1]]
+			if found {
+				return
+			}
+		}
+	}
+	return
+}
 
 func (p *Package) collectTypes() {
 	for _, f := range p.Files {
@@ -134,12 +212,51 @@ func (f *File) collectMethods() {
 			Recv:       r,
 			Name:       x.Name.Name,
 			Doc:        x.Doc,
-			Params:     []Type{},
-			Result:     []Type{},
+			Params:     f.expandFuncFields(x.Type.Params),
+			Results:    f.expandFuncFields(x.Type.Results),
 			IsVariadic: isVariadic(x.Type),
 		}
 		r.addMethods(m)
 		return true
 	}
 	ast.Inspect(f.File, collectMethods)
+}
+
+func (f *File) expandFuncFields(fieldList *ast.FieldList) (fields []*FuncField) {
+	if fieldList != nil {
+		for _, g := range fieldList.List {
+			typeName := f.tryFormat(g.Type)
+			m := len(g.Names)
+			if m == 0 {
+				fields = append(fields, &FuncField{
+					TypeName: typeName,
+				})
+			} else {
+				for _, name := range g.Names {
+					fields = append(fields, &FuncField{
+						Name:     name.Name,
+						TypeName: typeName,
+					})
+				}
+			}
+		}
+	}
+	return
+}
+
+func (f *File) format(node ast.Node) (code string, err error) {
+	var dst bytes.Buffer
+	err = format.Node(&dst, f.FileSet, node)
+	if err != nil {
+		return
+	}
+	return dst.String(), nil
+}
+
+func (f *File) tryFormat(node ast.Node, defaultValue ...string) string {
+	code, err := f.format(node)
+	if err != nil && len(defaultValue) > 0 {
+		return defaultValue[0]
+	}
+	return code
 }
