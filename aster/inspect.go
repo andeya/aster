@@ -110,11 +110,73 @@ func (p *Package) collectTypes() {
 // otherwise use *Package.collectTypes()
 func (f *File) collectTypes(collectMethods bool) {
 	f.Types = make(map[string]Type)
+	f.collectCommonTypes()
 	f.collectFuncs()
 	f.collectStructs()
 	if collectMethods {
 		f.collectMethods()
 	}
+}
+
+func (f *File) collectTypeSpecs(fn func(*ast.TypeSpec, *ast.CommentGroup)) {
+	ast.Inspect(f.File, func(n ast.Node) bool {
+		decl, ok := n.(*ast.GenDecl)
+		if !ok {
+			doc := decl.Doc
+			for _, spec := range decl.Specs {
+				if td, ok := spec.(*ast.TypeSpec); ok {
+					if td.Doc != nil {
+						doc = td.Doc
+					}
+					fn(td, doc)
+				}
+			}
+		}
+		return true
+	})
+}
+
+func (f *File) collectCommonTypes() {
+	f.collectTypeSpecs(func(node *ast.TypeSpec, doc *ast.CommentGroup) {
+		name := node.Name.Name
+		t, ok := f.newCommonTypes(name, node, doc)
+		if ok {
+			f.Types[name] = t
+		}
+	})
+}
+
+func (f *File) newCommonTypes(name string, node ast.Node, doc *ast.CommentGroup) (Type, bool) {
+	var pkgName = f.PkgName
+	switch x := node.(type) {
+	case *ast.Ident:
+		t, ok := getBasicType(x.Name)
+		if !ok || t.Name() == name {
+			return nil, false
+		}
+		return newCommonType(x, t.Kind(), name, pkgName, doc), true
+	case *ast.ChanType:
+		return newChanType(x, name, pkgName, doc), true
+	case *ast.ArrayType:
+		// TODO
+		if x.Len == nil {
+			return newSliceType(x, name, pkgName, doc), true
+		}
+		return newArrayType(x, name, pkgName, doc), true
+	case *ast.MapType:
+		// TODO
+		return newMapType(x, name, pkgName, doc), true
+	case *ast.InterfaceType:
+		// TODO
+		return newInterfaceType(x, name, pkgName, doc), true
+	case *ast.StarExpr:
+		t, ok := f.newCommonTypes(name, x.X, doc)
+		if ok {
+			return newPtrType(x, t), true
+		}
+	default:
+	}
+	return nil, false
 }
 
 func (f *File) collectFuncs() {
@@ -130,7 +192,10 @@ func (f *File) collectFuncs() {
 				return true
 			}
 			funcType = x.Type
-			t = newFuncType(x, x.Name.Name, f.PkgName, x.Doc)
+			t = newFuncType(&ast.FuncLit{
+				Type: x.Type,
+				Body: x.Body,
+			}, x.Name.Name, f.PkgName, x.Doc)
 		default:
 			return true
 		}
@@ -142,17 +207,6 @@ func (f *File) collectFuncs() {
 	ast.Inspect(f.File, collectFuncs)
 }
 
-// func collectDecl(f *File) (decls []ast.Decl) {
-// 	ast.Inspect(f.File, func(n ast.Node) bool {
-// 		decl, ok := n.(ast.Decl)
-// 		if ok {
-// 			decls = append(decls, decl)
-// 		}
-// 		return true
-// 	})
-// 	return
-// }
-
 // collectStructs collects and maps structType nodes to their positions
 func (f *File) collectStructs() {
 	collectStructs := func(n ast.Node) bool {
@@ -163,33 +217,35 @@ func (f *File) collectStructs() {
 				return true
 			}
 			st := newStructType(t, "", "", nil)
-			f.Types[st.String()] = st
+			f.Types[st.Name()] = st
 		case *ast.GenDecl:
-			var declDoc *ast.CommentGroup
-			if len(x.Specs) == 1 {
-				declDoc = x.Doc
-			}
 			for _, spec := range x.Specs {
 				var t ast.Expr
 				var structName string
-				var doc = declDoc
-				switch x := spec.(type) {
+				var doc = x.Doc
+				switch y := spec.(type) {
 				case *ast.TypeSpec:
-					if x.Type == nil {
+					if y.Type == nil {
 						continue
 					}
-					structName = x.Name.Name
-					t = x.Type
+					structName = y.Name.Name
+					t = y.Type
+					if y.Doc != nil {
+						doc = y.Doc
+					}
 				case *ast.ValueSpec:
-					structName = x.Names[0].Name
-					t = x.Type
+					structName = y.Names[0].Name
+					t = y.Type
+					if y.Doc != nil {
+						doc = y.Doc
+					}
 				}
-				x, ok := t.(*ast.StructType)
+				z, ok := t.(*ast.StructType)
 				if !ok {
 					continue
 				}
-				st := newStructType(x, structName, f.PkgName, doc)
-				f.Types[st.String()] = st
+				st := newStructType(z, structName, f.PkgName, doc)
+				f.Types[st.Name()] = st
 			}
 		}
 		return true

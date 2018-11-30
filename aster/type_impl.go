@@ -17,7 +17,9 @@ package aster
 import (
 	"errors"
 	"go/ast"
+	"go/token"
 	"reflect"
+	"strconv"
 )
 
 // CommonType common type
@@ -213,11 +215,13 @@ func (c *CopyType) Origin() Type {
 
 // PtrType pointer type
 type PtrType struct {
+	ast.Node
 	Type
 }
 
-func newPtrType(t Type) *PtrType {
+func newPtrType(node *ast.StarExpr, t Type) *PtrType {
 	return &PtrType{
+		Node: node,
 		Type: t,
 	}
 }
@@ -242,27 +246,21 @@ func (p *PtrType) Elem() Type {
 	return p.Type
 }
 
-// SliceType slice
-type SliceType struct {
-	*CommonType
-	elem Type
-}
+// Pos .
+func (p *PtrType) Pos() token.Pos { return p.Node.Pos() }
 
-// Kind returns the specific kind of this type.
-func (*SliceType) Kind() Kind {
-	return Array
-}
-
-// Elem returns a type's element type.
-func (s *SliceType) Elem() Type {
-	return s.elem
-}
+// End .
+func (p *PtrType) End() token.Pos { return p.Node.End() }
 
 // ArrayType array type
 type ArrayType struct {
 	*CommonType
-	len  int
 	elem Type
+}
+
+// TODO
+func newArrayType(node *ast.ArrayType, name string, pkgName string, doc *ast.CommentGroup) *CommonType {
+	return newCommonType(node, Array, name, pkgName, doc)
 }
 
 // Kind returns the specific kind of this type.
@@ -277,7 +275,29 @@ func (a *ArrayType) Elem() Type {
 
 // Len returns an array type's length.
 func (a *ArrayType) Len() int {
-	return a.len
+	cnt, _ := strconv.Atoi(a.Node.(*ast.ArrayType).Len.(*ast.BasicLit).Value)
+	return cnt
+}
+
+// SliceType slice
+type SliceType struct {
+	*CommonType
+	elem Type
+}
+
+// TODO
+func newSliceType(node *ast.ArrayType, name string, pkgName string, doc *ast.CommentGroup) *CommonType {
+	return newCommonType(node, Slice, name, pkgName, doc)
+}
+
+// Kind returns the specific kind of this type.
+func (*SliceType) Kind() Kind {
+	return Array
+}
+
+// Elem returns a type's element type.
+func (s *SliceType) Elem() Type {
+	return s.elem
 }
 
 // MapType map
@@ -285,6 +305,11 @@ type MapType struct {
 	*CommonType
 	key   Type
 	value Type
+}
+
+// TODO
+func newMapType(node *ast.MapType, name string, pkgName string, doc *ast.CommentGroup) *CommonType {
+	return newCommonType(node, Map, name, pkgName, doc)
 }
 
 // Kind returns the specific kind of this type.
@@ -305,13 +330,27 @@ func (m *MapType) Value() Type {
 // ChanType represents a channel type's direction.
 type ChanType struct {
 	*CommonType
-	chanDir reflect.ChanDir
+}
+
+func newChanType(node *ast.ChanType, name string, pkgName string, doc *ast.CommentGroup) *CommonType {
+	return newCommonType(node, Chan, name, pkgName, doc)
 }
 
 // ChanDir returns a channel type's direction.
 // It panics if the type's Kind is not Chan.
-func (c *ChanType) ChanDir() reflect.ChanDir {
-	return c.chanDir
+func (c *ChanType) ChanDir() ast.ChanDir {
+	return c.CommonType.Node.(*ast.ChanType).Dir
+}
+
+// InterfaceType represents a interface type.
+type InterfaceType struct {
+	*CommonType
+}
+
+func newInterfaceType(node *ast.InterfaceType, name string, pkgName string, doc *ast.CommentGroup, methods ...*Method) *CommonType {
+	t := newCommonType(node, Interface, name, pkgName, doc)
+	t.addMethods(methods...)
+	return t
 }
 
 // FuncType function type
@@ -322,17 +361,10 @@ type FuncType struct {
 	isVariadic bool
 }
 
-func newFuncType(node ast.Node, name string, pkgName string, doc *ast.CommentGroup) *FuncType {
-	var t *ast.FuncType
-	switch x := node.(type) {
-	case *ast.FuncLit:
-		t = x.Type
-	case *ast.FuncDecl:
-		t = x.Type
-	}
+func newFuncType(node *ast.FuncLit, name string, pkgName string, doc *ast.CommentGroup) *FuncType {
 	f := &FuncType{
 		CommonType: newCommonType(node, Func, name, pkgName, doc),
-		isVariadic: isVariadic(t),
+		isVariadic: isVariadic(node.Type),
 	}
 	return f
 }
@@ -384,7 +416,7 @@ type StructType struct {
 	fields []*StructField // sorted by offset
 }
 
-func newStructType(node ast.Node, name string, pkgName string, doc *ast.CommentGroup) *StructType {
+func newStructType(node *ast.StructType, name string, pkgName string, doc *ast.CommentGroup) *StructType {
 	return &StructType{
 		CommonType: newCommonType(node, Struct, name, pkgName, doc),
 	}
@@ -442,24 +474,23 @@ func (s *StructType) FieldByName(name string) (field *StructField, found bool) {
 
 // basic types
 var (
-	BasicBool          Type = newCommonType(nil, Bool, "bool", "", nil)
-	BasicInt           Type = newCommonType(nil, Int, "int", "", nil)
-	BasicInt8          Type = newCommonType(nil, Int8, "int8", "", nil)
-	BasicInt16         Type = newCommonType(nil, Int16, "int16", "", nil)
-	BasicInt32         Type = newCommonType(nil, Int32, "int32", "", nil)
-	BasicInt64         Type = newCommonType(nil, Int64, "int64", "", nil)
-	BasicUint          Type = newCommonType(nil, Uint, "uint", "", nil)
-	BasicUint8         Type = newCommonType(nil, Uint8, "uint8", "", nil)
-	BasicUint16        Type = newCommonType(nil, Uint16, "uint16", "", nil)
-	BasicUint32        Type = newCommonType(nil, Uint32, "uint32", "", nil)
-	BasicUint64        Type = newCommonType(nil, Uint64, "uint64", "", nil)
-	BasicUintptr       Type = newCommonType(nil, Uintptr, "uintptr", "", nil)
-	BasicFloat32       Type = newCommonType(nil, Float32, "float32", "", nil)
-	BasicFloat64       Type = newCommonType(nil, Float64, "float64", "", nil)
-	BasicComplex64     Type = newCommonType(nil, Complex64, "complex64", "", nil)
-	BasicComplex128    Type = newCommonType(nil, Complex128, "complex128", "", nil)
-	BasicString        Type = newCommonType(nil, String, "string", "", nil)
-	BasicUnsafePointer Type = newCommonType(nil, UnsafePointer, "unsafe.Pointer", "", nil)
+	BasicBool       Type = newCommonType(nil, Bool, "bool", "", nil)
+	BasicInt        Type = newCommonType(nil, Int, "int", "", nil)
+	BasicInt8       Type = newCommonType(nil, Int8, "int8", "", nil)
+	BasicInt16      Type = newCommonType(nil, Int16, "int16", "", nil)
+	BasicInt32      Type = newCommonType(nil, Int32, "int32", "", nil)
+	BasicInt64      Type = newCommonType(nil, Int64, "int64", "", nil)
+	BasicUint       Type = newCommonType(nil, Uint, "uint", "", nil)
+	BasicUint8      Type = newCommonType(nil, Uint8, "uint8", "", nil)
+	BasicUint16     Type = newCommonType(nil, Uint16, "uint16", "", nil)
+	BasicUint32     Type = newCommonType(nil, Uint32, "uint32", "", nil)
+	BasicUint64     Type = newCommonType(nil, Uint64, "uint64", "", nil)
+	BasicUintptr    Type = newCommonType(nil, Uintptr, "uintptr", "", nil)
+	BasicFloat32    Type = newCommonType(nil, Float32, "float32", "", nil)
+	BasicFloat64    Type = newCommonType(nil, Float64, "float64", "", nil)
+	BasicComplex64  Type = newCommonType(nil, Complex64, "complex64", "", nil)
+	BasicComplex128 Type = newCommonType(nil, Complex128, "complex128", "", nil)
+	BasicString     Type = newCommonType(nil, String, "string", "", nil)
 )
 
 func getBasicType(name string) (t Type, found bool) {
@@ -499,8 +530,6 @@ func getBasicType(name string) (t Type, found bool) {
 		t = BasicComplex128
 	case "string":
 		t = BasicString
-	case "unsafe.Pointer":
-		t = BasicUnsafePointer
 	default:
 		return nil, false
 	}

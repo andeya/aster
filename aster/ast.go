@@ -72,7 +72,7 @@ type File struct {
 	Filename string
 	Src      []byte
 	mode     parser.Mode
-	Types    map[string]Type // <[*][pkg.]name, Type>
+	Types    map[string]Type // <type name, Type>
 	Imports  []*Import
 	*ast.File
 }
@@ -162,34 +162,33 @@ const (
 	Invalid Kind = reflect.Invalid
 
 	// common types
-	Bool          Kind = reflect.Bool
-	Int           Kind = reflect.Int
-	Int8          Kind = reflect.Int8
-	Int16         Kind = reflect.Int16
-	Int32         Kind = reflect.Int32
-	Int64         Kind = reflect.Int64
-	Uint          Kind = reflect.Uint
-	Uint8         Kind = reflect.Uint8
-	Uint16        Kind = reflect.Uint16
-	Uint32        Kind = reflect.Uint32
-	Uint64        Kind = reflect.Uint64
-	Uintptr       Kind = reflect.Uintptr
-	Float32       Kind = reflect.Float32
-	Float64       Kind = reflect.Float64
-	Complex64     Kind = reflect.Complex64
-	Complex128    Kind = reflect.Complex128
-	String        Kind = reflect.String
-	UnsafePointer Kind = reflect.UnsafePointer
-	Interface     Kind = reflect.Interface
+	Bool       Kind = reflect.Bool
+	Int        Kind = reflect.Int
+	Int8       Kind = reflect.Int8
+	Int16      Kind = reflect.Int16
+	Int32      Kind = reflect.Int32
+	Int64      Kind = reflect.Int64
+	Uint       Kind = reflect.Uint
+	Uint8      Kind = reflect.Uint8
+	Uint16     Kind = reflect.Uint16
+	Uint32     Kind = reflect.Uint32
+	Uint64     Kind = reflect.Uint64
+	Uintptr    Kind = reflect.Uintptr
+	Float32    Kind = reflect.Float32
+	Float64    Kind = reflect.Float64
+	Complex64  Kind = reflect.Complex64
+	Complex128 Kind = reflect.Complex128
+	String     Kind = reflect.String
 
 	// special types
-	Array  Kind = reflect.Array
-	Slice  Kind = reflect.Slice
-	Map    Kind = reflect.Map
-	Chan   Kind = reflect.Chan
-	Func   Kind = reflect.Func
-	Struct Kind = reflect.Struct
-	Ptr    Kind = reflect.Ptr
+	Interface Kind = reflect.Interface
+	Chan      Kind = reflect.Chan
+	Array     Kind = reflect.Array
+	Slice     Kind = reflect.Slice
+	Map       Kind = reflect.Map
+	Func      Kind = reflect.Func
+	Struct    Kind = reflect.Struct
+	Ptr       Kind = reflect.Ptr
 )
 
 // NilNode nil Node
