@@ -103,7 +103,6 @@ func (p *Package) collectTypes() {
 	// Waiting for types ready to do method association
 	for _, f := range p.Files {
 		f.collectMethods()
-		f.addFuncParamAndResult()
 	}
 }
 
@@ -115,30 +114,32 @@ func (f *File) collectTypes(collectMethods bool) {
 	f.collectStructs()
 	if collectMethods {
 		f.collectMethods()
-		f.addFuncParamAndResult()
 	}
 }
 
 func (f *File) collectFuncs() {
 	collectFuncs := func(n ast.Node) bool {
+		var t *FuncType
+		var funcType *ast.FuncType
 		switch x := n.(type) {
 		case *ast.FuncLit:
-			t := newFuncType(x, "", "", nil)
-			f.Types[t.String()] = t
+			funcType = x.Type
+			t = newFuncType(x, "", "", nil)
 		case *ast.FuncDecl:
 			if x.Recv != nil {
 				return true
 			}
-			t := newFuncType(x, x.Name.Name, f.PkgName, x.Doc)
-			f.Types[t.String()] = t
+			funcType = x.Type
+			t = newFuncType(x, x.Name.Name, f.PkgName, x.Doc)
+		default:
+			return true
 		}
+		t.params = f.expandFuncFields(funcType.Params)
+		t.results = f.expandFuncFields(funcType.Results)
+		f.Types[t.String()] = t
 		return true
 	}
 	ast.Inspect(f.File, collectFuncs)
-}
-
-func (f *File) addFuncParamAndResult() {
-	// TODO
 }
 
 // func collectDecl(f *File) (decls []ast.Decl) {
