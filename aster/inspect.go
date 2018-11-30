@@ -19,10 +19,41 @@ import (
 	"go/token"
 )
 
-func (f *File) collectTypes() {
+func (p *Package) collectTypes() {
+	for _, f := range p.Files {
+		f.collectTypes(false)
+	}
+	// Waiting for types ready to do method association
+	for _, f := range p.Files {
+		f.collectMethods()
+	}
+}
+
+// Use the method if no other file in the same package,
+// otherwise use *Package.collectTypes()
+func (f *File) collectTypes(collectMethods bool) {
 	f.Types = make(map[token.Pos]Type)
-	f.collectStructs()
 	f.collectFuncs()
+	f.collectStructs()
+	if collectMethods {
+		f.collectMethods()
+	}
+}
+
+func (f *File) collectFuncs() {
+	collectFuncs := func(n ast.Node) bool {
+		switch x := n.(type) {
+		case *ast.FuncLit:
+			f.Types[x.Pos()] = newFuncType(x, "", "", nil)
+		case *ast.FuncDecl:
+			if x.Recv != nil {
+				return true
+			}
+			f.Types[x.Pos()] = newFuncType(x, x.Name.Name, f.PkgName, x.Doc)
+		}
+		return true
+	}
+	ast.Inspect(f.File, collectFuncs)
 }
 
 // func collectDecl(f *File) (decls []ast.Decl) {
@@ -76,7 +107,6 @@ func (f *File) collectStructs() {
 		return true
 	}
 	ast.Inspect(f.File, collectStructs)
-	f.collectMethods()
 }
 
 func (f *File) collectMethods() {
@@ -91,27 +121,16 @@ func (f *File) collectMethods() {
 			return true
 		}
 		m := &Method{
-			FuncDecl: x,
-			Recv:     s,
-			Name:     x.Name.Name,
-			Doc:      x.Doc,
-			Params:   []Type{},
-			Result:   []Type{},
-		}
-		params := x.Type.Params
-		if num := len(params.List); num > 0 {
-			_, ok := params.List[num-1].Type.(*ast.Ellipsis)
-			if ok {
-				m.IsVariadic = true
-			}
+			FuncDecl:   x,
+			Recv:       s,
+			Name:       x.Name.Name,
+			Doc:        x.Doc,
+			Params:     []Type{},
+			Result:     []Type{},
+			IsVariadic: isVariadic(x.Type),
 		}
 		s.addMethods(m)
 		return true
 	}
 	ast.Inspect(f.File, collectMethods)
-}
-
-func (f *File) collectFuncs() {
-	// 	*ast.FuncDecl
-	// *ast.FuncLit
 }

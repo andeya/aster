@@ -322,8 +322,18 @@ type FuncType struct {
 	isVariadic bool
 }
 
-func newFuncType(node *ast.FuncDecl) *FuncType {
-	f := &FuncType{}
+func newFuncType(node ast.Node, name string, pkgName string, doc *ast.CommentGroup) *FuncType {
+	var t *ast.FuncType
+	switch x := node.(type) {
+	case *ast.FuncLit:
+		t = x.Type
+	case *ast.FuncDecl:
+		t = x.Type
+	}
+	f := &FuncType{
+		CommonType: newCommonType(node, Func, name, pkgName, doc),
+		isVariadic: isVariadic(t),
+	}
 	return f
 }
 

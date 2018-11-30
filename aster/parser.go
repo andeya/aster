@@ -117,7 +117,7 @@ func (f *File) Reparse() (err error) {
 	if file.Name != nil {
 		f.PkgName = file.Name.Name
 	}
-	f.collectTypes()
+	f.collectTypes(true)
 	return
 }
 
@@ -135,6 +135,7 @@ func convertPackage(mod *Module, dir string, pkg *ast.Package) *Package {
 	for k, v := range pkg.Files {
 		p.Files[k] = convertFile(p, k, v)
 	}
+	p.collectTypes()
 	return p
 }
 
@@ -149,7 +150,6 @@ func convertFile(pkg *Package, filename string, file *ast.File) *File {
 		mode:     pkg.mode,
 		pkg:      pkg,
 	}
-	f.collectTypes()
 	return f
 }
 
@@ -171,4 +171,15 @@ func readSource(filename string, src interface{}) ([]byte, error) {
 		return nil, errors.New("invalid source")
 	}
 	return ioutil.ReadFile(filename)
+}
+
+func isVariadic(t *ast.FuncType) bool {
+	params := t.Params
+	if num := len(params.List); num > 0 {
+		_, ok := params.List[num-1].Type.(*ast.Ellipsis)
+		if ok {
+			return true
+		}
+	}
+	return false
 }
