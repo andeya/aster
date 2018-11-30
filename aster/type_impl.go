@@ -318,7 +318,7 @@ func (c *ChanType) ChanDir() reflect.ChanDir {
 type FuncType struct {
 	*CommonType
 	params     []Type
-	result     []Type
+	results    []Type
 	isVariadic bool
 }
 
@@ -344,7 +344,7 @@ func (f *FuncType) NumParam() int {
 
 // NumResult returns a function type's output parameter count.
 func (f *FuncType) NumResult() int {
-	return len(f.result)
+	return len(f.results)
 }
 
 // Param returns the type of a function type's i'th input parameter.
@@ -357,10 +357,10 @@ func (f *FuncType) Param(i int) (t Type, found bool) {
 
 // Result returns the type of a function type's i'th output parameter.
 func (f *FuncType) Result(i int) (t Type, found bool) {
-	if i < 0 || i >= len(f.result) {
+	if i < 0 || i >= len(f.results) {
 		return
 	}
-	return f.result[i], true
+	return f.results[i], true
 }
 
 // IsVariadic reports whether a function type's final input parameter

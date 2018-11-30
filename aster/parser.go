@@ -23,6 +23,7 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
+	"strings"
 )
 
 // ParseDir calls ParseFile for all files with names ending in ".go" in the
@@ -117,8 +118,24 @@ func (f *File) Reparse() (err error) {
 	if file.Name != nil {
 		f.PkgName = file.Name.Name
 	}
+	f.setImports()
 	f.collectTypes(true)
 	return
+}
+
+func (f *File) setImports() {
+	for _, v := range f.File.Imports {
+		imp := &Import{
+			Path: v.Path.Value[1 : len(v.Path.Value)-1],
+			Doc:  v.Doc,
+		}
+		if v.Name != nil {
+			imp.Name = v.Name.Name
+		} else {
+			imp.Name = imp.Path[strings.LastIndex(imp.Path, "/")+1:]
+		}
+		f.Imports = append(f.Imports, imp)
+	}
 }
 
 func convertPackage(mod *Module, dir string, pkg *ast.Package) *Package {
@@ -150,6 +167,7 @@ func convertFile(pkg *Package, filename string, file *ast.File) *File {
 		mode:     pkg.mode,
 		pkg:      pkg,
 	}
+	f.setImports()
 	return f
 }
 

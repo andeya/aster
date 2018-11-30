@@ -21,6 +21,7 @@ import (
 	"go/token"
 	"os"
 	"reflect"
+	"strings"
 )
 
 // Module packages AST
@@ -28,7 +29,7 @@ type Module struct {
 	FileSet *token.FileSet
 	Dir     string
 	filter  func(os.FileInfo) bool
-	Pkgs    map[string]*Package
+	Pkgs    map[string]*Package // <package name, *Package>
 	mode    parser.Mode
 }
 
@@ -72,20 +73,89 @@ type File struct {
 	Filename string
 	Src      []byte
 	mode     parser.Mode
-	Types    map[token.Pos]Type
+	Types    map[string]Type // <[*][pkg.]name, Type>
+	Imports  []*Import
 	*ast.File
 }
 
-// GetImportPath returns the imported package path by package name.
-func (f *File) GetImportPath(pkgName string) (pkgPath string, found bool) {
-	if pkgName == "" || pkgName == "." {
+// Import import info
+type Import struct {
+	Name string
+	Path string
+	Doc  *ast.CommentGroup
+}
+
+// LookupImports lookups the import info by package name.
+func (f *File) LookupImports(currPkgName string) (imports []*Import, found bool) {
+	for _, imp := range f.Imports {
+		if imp.Name == currPkgName {
+			imports = append(imports, imp)
+			found = true
+		}
+	}
+	return
+}
+
+// LookupPackages lookups the package object by package name.
+// NOTE: Only lookup the parsed module.
+func (f *File) LookupPackages(currPkgName string) (pkgs []*Package, found bool) {
+	if f.pkg == nil || f.pkg.module == nil {
 		return
 	}
-	for _, imp := range f.File.Imports {
-		if imp.Name == nil || imp.Name.Name != pkgName {
-			continue
+	imps, found := f.LookupImports(currPkgName)
+	if !found {
+		return
+	}
+	mod := f.pkg.module
+	for _, imp := range imps {
+		if p, ok := mod.Pkgs[imp.Name]; ok {
+			pkgs = append(pkgs, p)
+			found = true
 		}
-		return imp.Path.Value, true
+	}
+	return
+}
+
+// LookupType lookup Type by type name.
+func (f *File) LookupType(name string) (t Type, found bool) {
+	name = strings.TrimLeft(name, "*")
+	// May be basic type?
+	t, found = getBasicType(name)
+	if found {
+		return
+	}
+	// May be in the current package?
+	if !strings.Contains(name, ".") {
+		if f.pkg == nil {
+			t, found = f.Types[name]
+			if found {
+				return
+			}
+		} else {
+			for _, v := range f.pkg.Files {
+				t, found = v.Types[name]
+				if found {
+					return
+				}
+			}
+		}
+	}
+	// May be in the other module packages?
+	a := strings.SplitN(name, ".", 2)
+	if len(a) == 1 {
+		a = []string{".", name}
+	}
+	pkgs, ok := f.LookupPackages(a[0])
+	if !ok {
+		return
+	}
+	for _, p := range pkgs {
+		for _, v := range p.Files {
+			t, found = v.Types[a[1]]
+			if found {
+				return
+			}
+		}
 	}
 	return
 }

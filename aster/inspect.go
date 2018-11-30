@@ -16,7 +16,6 @@ package aster
 
 import (
 	"go/ast"
-	"go/token"
 )
 
 func (p *Package) collectTypes() {
@@ -26,17 +25,19 @@ func (p *Package) collectTypes() {
 	// Waiting for types ready to do method association
 	for _, f := range p.Files {
 		f.collectMethods()
+		f.addFuncParamAndResult()
 	}
 }
 
 // Use the method if no other file in the same package,
 // otherwise use *Package.collectTypes()
 func (f *File) collectTypes(collectMethods bool) {
-	f.Types = make(map[token.Pos]Type)
+	f.Types = make(map[string]Type)
 	f.collectFuncs()
 	f.collectStructs()
 	if collectMethods {
 		f.collectMethods()
+		f.addFuncParamAndResult()
 	}
 }
 
@@ -44,16 +45,22 @@ func (f *File) collectFuncs() {
 	collectFuncs := func(n ast.Node) bool {
 		switch x := n.(type) {
 		case *ast.FuncLit:
-			f.Types[x.Pos()] = newFuncType(x, "", "", nil)
+			t := newFuncType(x, "", "", nil)
+			f.Types[t.String()] = t
 		case *ast.FuncDecl:
 			if x.Recv != nil {
 				return true
 			}
-			f.Types[x.Pos()] = newFuncType(x, x.Name.Name, f.PkgName, x.Doc)
+			t := newFuncType(x, x.Name.Name, f.PkgName, x.Doc)
+			f.Types[t.String()] = t
 		}
 		return true
 	}
 	ast.Inspect(f.File, collectFuncs)
+}
+
+func (f *File) addFuncParamAndResult() {
+	// TODO
 }
 
 // func collectDecl(f *File) (decls []ast.Decl) {
@@ -76,7 +83,8 @@ func (f *File) collectStructs() {
 			if !ok {
 				return true
 			}
-			f.Types[x.Pos()] = newStructType(t, "", "", nil)
+			st := newStructType(t, "", "", nil)
+			f.Types[st.String()] = st
 		case *ast.GenDecl:
 			var declDoc *ast.CommentGroup
 			if len(x.Specs) == 1 {
@@ -101,7 +109,8 @@ func (f *File) collectStructs() {
 				if !ok {
 					continue
 				}
-				f.Types[x.Pos()] = newStructType(x, structName, f.PkgName, doc)
+				st := newStructType(x, structName, f.PkgName, doc)
+				f.Types[st.String()] = st
 			}
 		}
 		return true
@@ -115,21 +124,21 @@ func (f *File) collectMethods() {
 		if !ok || x.Recv == nil || len(x.Recv.List) == 0 {
 			return true
 		}
-		recvPos := x.Recv.List[0].Type.(*ast.StarExpr).X.(*ast.Ident).Obj.Pos()
-		s, ok := f.Types[recvPos]
+		recvTypeName := x.Recv.List[0].Type.(*ast.StarExpr).X.(*ast.Ident).Name
+		r, ok := f.LookupType(recvTypeName)
 		if !ok {
 			return true
 		}
 		m := &Method{
 			FuncDecl:   x,
-			Recv:       s,
+			Recv:       r,
 			Name:       x.Name.Name,
 			Doc:        x.Doc,
 			Params:     []Type{},
 			Result:     []Type{},
 			IsVariadic: isVariadic(x.Type),
 		}
-		s.addMethods(m)
+		r.addMethods(m)
 		return true
 	}
 	ast.Inspect(f.File, collectMethods)
