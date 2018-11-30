@@ -8,5 +8,6 @@ Under development, not for production...
 
 ## Feature
 
-- Convert the abstract syntax tree to a `reflect.Type`-like types
+- Convert the AST to `reflect.Type`-like types, as it would at runtime
+- Simpler, more natural way of metaprogramming
 - ...
