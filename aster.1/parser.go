@@ -119,7 +119,7 @@ func (f *File) Reparse() (err error) {
 		f.PkgName = file.Name.Name
 	}
 	f.setImports()
-	f.collectNodes(true)
+	f.collectTypes(true)
 	return
 }
 
@@ -152,7 +152,7 @@ func convertPackage(mod *Module, dir string, pkg *ast.Package) *Package {
 	for k, v := range pkg.Files {
 		p.Files[k] = convertFile(p, k, v)
 	}
-	p.collectNodes()
+	p.collectTypes()
 	return p
 }
 

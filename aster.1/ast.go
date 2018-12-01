@@ -16,7 +16,6 @@
 package aster
 
 import (
-	"errors"
 	"go/ast"
 	"go/parser"
 	"go/token"
@@ -66,16 +65,15 @@ type Package struct {
 // are "free-floating" (see also issues #18593, #20744).
 //
 type File struct {
-	*ast.File
 	pkg      *Package // nil when not existed
 	PkgName  string
 	FileSet  *token.FileSet
 	Filename string
 	Src      []byte
 	mode     parser.Mode
+	Types    map[string]Type // <type name, Type>
 	Imports  []*Import
-	Types    map[token.Pos]TypeNode // <type pos, TypeNode>
-	Funcs    map[token.Pos]FuncNode // <func or method pos, FuncNode>
+	*ast.File
 }
 
 // Import import info
@@ -85,39 +83,23 @@ type Import struct {
 	Doc  *ast.CommentGroup
 }
 
-// ExtNode the basic sub-interface based on ast.Node extension,
-// is the supertype of other extended interfaces.
-type ExtNode interface {
-	ast.Node // origin AST node
+// Type is the representation of a Go type.
+type Type interface {
+	ast.Node
 
 	// Name returns the type's name within its package for a defined type.
 	// For other (non-defined) types it returns the empty string.
 	Name() string
 
+	// String returns a string representation of the type.
+	// The string representation may use shortened package names
+	// (e.g., base64 instead of "encoding/base64") and is not
+	// guaranteed to be unique among types. To test for type identity,
+	// compare the Types directly.
+	String() string
+
 	// Kind returns the specific kind of this type.
 	Kind() Kind
-
-	// Doc returns lead comment.
-	Doc() string
-
-	// SetDoc sets lead comment.
-	// NOTE: returns errror if Name==""
-	SetDoc(string) error
-}
-
-// TypeNode is the representation of a Go type node.
-//
-//
-//
-type TypeNode interface {
-	ExtNode
-	typeNode() // only as identify method
-
-	// IsAssign is there `=` for declared type?
-	IsAssign() bool
-
-	// NumMethod returns the number of exported methods in the type's method set.
-	NumMethod() int
 
 	// Method returns the i'th method in the type's method set.
 	// For a non-interface type T or *T, the returned Method's Type and Func
@@ -125,7 +107,7 @@ type TypeNode interface {
 	//
 	// For an interface type, the returned Method's Type field gives the
 	// method signature, without a receiver, and the Func field is nil.
-	Method(int) (FuncNode, bool)
+	Method(int) (*Method, bool)
 
 	// MethodByName returns the method with that name in the type's
 	// method set and a boolean indicating if the method was found.
@@ -135,56 +117,29 @@ type TypeNode interface {
 	//
 	// For an interface type, the returned Method's Type field gives the
 	// method signature, without a receiver, and the Func field is nil.
-	MethodByName(string) (FuncNode, bool)
+	MethodByName(string) (*Method, bool)
+
+	// NumMethod returns the number of exported methods in the type's method set.
+	NumMethod() int
 
 	// Implements reports whether the type implements the interface type u.
-	Implements(u TypeNode) bool
+	Implements(u Type) bool
 
-	// addMethod adds a FuncNode as method.
-	//
-	// Returns error if the FuncNode is already exist or receiver is not the TypeNode.
-	addMethod(FuncNode) error
-}
+	// Doc returns lead comment.
+	Doc() string
 
-// FuncNode is the representation of a Go function or method.
-type FuncNode interface {
-	ExtNode
-	funcNode() // only as identify method
+	// SetDoc sets lead comment.
+	// NOTE: returns errror if Name==""
+	SetDoc(string) error
 
-	// NumParam returns a function type's input parameter count.
-	NumParam() int
-
-	// NumResult returns a function type's output parameter count.
-	NumResult() int
-
-	// Param returns the type of a function type's i'th input parameter.
-	Param(int) (*FuncField, bool)
-
-	// Result returns the type of a function type's i'th output parameter.
-	Result(int) (*FuncField, bool)
-
-	// IsVariadic reports whether a function type's final input parameter
-	// is a "..." parameter. If so, t.In(t.NumIn() - 1) returns the parameter's
-	// implicit actual type []T.
-	//
-	// For concreteness, if t represents func(x int, y ... float64), then
-	//
-	//	f.NumParam() == 2
-	//	f.Param(0) is the Type for "int"
-	//	f.Param(1) is the Type for "[]float64"
-	//	f.IsVariadic() == true
-	//
-	IsVariadic() bool
-
-	// Recv returns receiver (methods); or returns false (functions)
-	Recv() (*FuncField, bool)
+	addMethods(method ...*Method)
 }
 
 // Method represents a single method.
 type Method struct {
 	*ast.FuncDecl
 	Name       string // method name
-	Recv       TypeNode
+	Recv       Type
 	Params     []*FuncField
 	Results    []*FuncField
 	IsVariadic bool
@@ -194,7 +149,7 @@ type Method struct {
 // FuncField function params or results.
 type FuncField struct {
 	Name     string
-	TypeName string // not contain `*`
+	TypeName string
 }
 
 // A Kind represents the specific kind of type that a Type represents.
@@ -231,49 +186,6 @@ const (
 	Ptr
 )
 
-func getBasicKind(basicName string) (k Kind, found bool) {
-	found = true
-	switch basicName {
-	case "bool":
-		k = Bool
-	case "int":
-		k = Int
-	case "int8":
-		k = Int8
-	case "int16":
-		k = Int16
-	case "int32":
-		k = Int32
-	case "int64":
-		k = Int64
-	case "uint":
-		k = Uint
-	case "uint8":
-		k = Uint8
-	case "uint16":
-		k = Uint16
-	case "uint32":
-		k = Uint32
-	case "uint64":
-		k = Uint64
-	case "uintptr":
-		k = Uintptr
-	case "float32":
-		k = Float32
-	case "float64":
-		k = Float64
-	case "complex64":
-		k = Complex64
-	case "complex128":
-		k = Complex128
-	case "string":
-		k = String
-	default:
-		return Invalid, false
-	}
-	return
-}
-
 // NilNode nil Node
 type NilNode struct{}
 
@@ -282,53 +194,3 @@ func (NilNode) Pos() token.Pos { return token.NoPos }
 
 // End .
 func (NilNode) End() token.Pos { return token.NoPos }
-
-// super common node extension info
-type super struct {
-	file    *File
-	kind    Kind
-	namePtr *string
-	doc     *ast.CommentGroup
-}
-
-func (f *File) newSuper(namePtr *string, kind Kind, doc *ast.CommentGroup) *super {
-	return &super{
-		file:    f,
-		kind:    kind,
-		namePtr: namePtr,
-		doc:     doc,
-	}
-}
-
-// Kind returns the facade kind of this node.
-func (s *super) Kind() Kind {
-	return s.kind
-}
-
-// Name returns the type's name within its package for a defined type.
-// For other (non-defined) types it returns the empty string.
-func (s *super) Name() string {
-	if s.namePtr == nil {
-		return ""
-	}
-	return *s.namePtr
-}
-
-// Doc returns lead comment.
-func (s *super) Doc() string {
-	if s.doc == nil {
-		return ""
-	}
-	return s.doc.Text()
-}
-
-// SetDoc sets lead comment.
-func (s *super) SetDoc(text string) error {
-	if s.Name() == "" {
-		return errors.New("anonymous type cannot set document")
-	}
-	s.doc = &ast.CommentGroup{
-		List: []*ast.Comment{{Text: text}},
-	}
-	return nil
-}

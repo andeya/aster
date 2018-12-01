@@ -17,29 +17,22 @@ package aster
 import (
 	"errors"
 	"go/ast"
-	"go/token"
 	"reflect"
 	"strconv"
 )
 
-// CommonType common type
-type CommonType struct {
-	ast.Node
+// superType common type
+type superType struct {
 	kind    Kind
-	pkgName string
-	name    string
+	pkgName func() string
+	name    func() string
 	methods []*Method
 	doc     *ast.CommentGroup
+	// numStars int
 }
 
-var _ Type = (*CommonType)(nil)
-
-func newCommonType(node ast.Node, kind Kind, name string, pkgName string, doc *ast.CommentGroup) *CommonType {
-	if node == nil {
-		node = NilNode{}
-	}
-	return &CommonType{
-		Node:    node,
+func newSuperType(pkgName, name func() string, kind Kind, doc *ast.CommentGroup) *superType {
+	return &superType{
 		kind:    kind,
 		pkgName: pkgName,
 		name:    name,
@@ -47,19 +40,19 @@ func newCommonType(node ast.Node, kind Kind, name string, pkgName string, doc *a
 	}
 }
 
-func (c *CommonType) addMethods(method ...*Method) {
+func (c *superType) addMethods(method ...*Method) {
 	c.methods = append(c.methods, method...)
 }
 
-// Kind returns the specific kind of this type.
-func (c *CommonType) Kind() Kind {
+// Kind returns the facade kind of this type.
+func (c *superType) Kind() Kind {
 	return c.kind
 }
 
 // Name returns the type's name within its package for a defined type.
 // For other (non-defined) types it returns the empty string.
-func (c *CommonType) Name() string {
-	return c.name
+func (c *superType) Name() string {
+	return c.name()
 }
 
 // String returns a string representation of the type.
@@ -67,11 +60,11 @@ func (c *CommonType) Name() string {
 // (e.g., base64 instead of "encoding/base64") and is not
 // guaranteed to be unique among types. To test for type identity,
 // compare the Types directly.
-func (c *CommonType) String() string {
-	if c.pkgName == "" || c.name == "" {
-		return c.name
+func (c *superType) String() string {
+	if c.pkgName() == "" || c.name() == "" {
+		return c.name()
 	}
-	return c.pkgName + "." + c.name
+	return c.pkgName() + "." + c.name()
 }
 
 // Method returns the i'th method in the type's method set.
@@ -82,7 +75,7 @@ func (c *CommonType) String() string {
 //
 // For an interface type, the returned Method's Type field gives the
 // method signature, without a receiver, and the Func field is nil.
-func (c *CommonType) Method(i int) (*Method, bool) {
+func (c *superType) Method(i int) (*Method, bool) {
 	if i < 0 || i >= len(c.methods) {
 		return nil, false
 	}
@@ -97,7 +90,7 @@ func (c *CommonType) Method(i int) (*Method, bool) {
 //
 // For an interface type, the returned Method's Type field gives the
 // method signature, without a receiver, and the Func field is nil.
-func (c *CommonType) MethodByName(name string) (*Method, bool) {
+func (c *superType) MethodByName(name string) (*Method, bool) {
 	for _, m := range c.methods {
 		if m.Name == name {
 			return m, true
@@ -107,12 +100,12 @@ func (c *CommonType) MethodByName(name string) (*Method, bool) {
 }
 
 // NumMethod returns the number of exported methods in the type's method set.
-func (c *CommonType) NumMethod() int {
+func (c *superType) NumMethod() int {
 	return len(c.methods)
 }
 
 // Implements reports whether the type implements the interface type u.
-func (c *CommonType) Implements(u Type) bool {
+func (c *superType) Implements(u Type) bool {
 	for i := u.NumMethod() - 1; i >= 0; i-- {
 		um, _ := u.Method(i)
 		cm, ok := c.MethodByName(um.Name)
@@ -137,7 +130,7 @@ func (c *CommonType) Implements(u Type) bool {
 }
 
 // Doc returns lead comment.
-func (c *CommonType) Doc() string {
+func (c *superType) Doc() string {
 	if c.doc == nil {
 		return ""
 	}
@@ -145,7 +138,7 @@ func (c *CommonType) Doc() string {
 }
 
 // SetDoc sets lead comment.
-func (c *CommonType) SetDoc(text string) error {
+func (c *superType) SetDoc(text string) error {
 	if c.Name() == "" {
 		return errors.New("anonymous type cannot set document")
 	}
@@ -155,112 +148,48 @@ func (c *CommonType) SetDoc(text string) error {
 	return nil
 }
 
-// AliasType alias type such as `type T2 = T`
+// AliasType alias type such as `type T2 T` or `type T2 = T`
 type AliasType struct {
-	Type
+	*superType
 	ast.Node
-	file *File
-	name string
-	doc  *ast.CommentGroup
+	t        Type
+	isAssign bool // is there `=` ?
+	doc      *ast.CommentGroup
 }
 
-// Name returns the type's name within its package for a defined type.
-// For other (non-defined) types it returns the empty string.
-func (a *AliasType) Name() string {
-	return a.name
-}
+var _ Type = (*AliasType)(nil)
 
-// String returns a string representation of the type.
-// The string representation may use shortened package names
-// (e.g., base64 instead of "encoding/base64") and is not
-// guaranteed to be unique among types. To test for type identity,
-// compare the Types directly.
-func (a *AliasType) String() string {
-	if a.file.PkgName == "" {
-		return a.name
-	}
-	return a.file.PkgName + "." + a.name
-}
-
-// Doc returns lead comment.
-func (a *AliasType) Doc() string {
-	if a.doc == nil {
-		return ""
-	}
-	return a.doc.Text()
-}
-
-// SetDoc sets lead comment.
-func (a *AliasType) SetDoc(text string) {
-	a.doc = &ast.CommentGroup{
-		List: []*ast.Comment{{Text: text}},
+// NOTE: ast.Node is *ast.StarExpr, *ast.Ident or *ast.SelectorExpr
+func newAliasType(node ast.Node, pkgName, name func() string, kind Kind, doc *ast.CommentGroup, isAssign bool) *AliasType {
+	return &AliasType{
+		superType: newSuperType(pkgName, name, kind, doc),
+		Node:      node,
+		isAssign:  isAssign,
+		doc:       doc,
 	}
 }
 
-// Ref returns the reference type.
-func (a *AliasType) Ref() Type {
-	return a.Type
-}
-
-// CopyType type such as `type T2 T`
-type CopyType struct {
-	origin Type
-	*CommonType
+// IsAssign is there `=` ?
+func (a *AliasType) IsAssign() bool {
+	return a.isAssign
 }
 
 // Origin returns the origin type.
-func (c *CopyType) Origin() Type {
-	return c.origin
+func (a *AliasType) Origin() Type {
+	return a.t
 }
-
-// PtrType pointer type
-type PtrType struct {
-	ast.Node
-	Type
-}
-
-func newPtrType(node *ast.StarExpr, t Type) *PtrType {
-	return &PtrType{
-		Node: node,
-		Type: t,
-	}
-}
-
-// Kind returns the specific kind of this type.
-func (p *PtrType) Kind() Kind {
-	return Ptr
-}
-
-// String returns a string representation of the type.
-// The string representation may use shortened package names
-// (e.g., base64 instead of "encoding/base64") and is not
-// guaranteed to be unique among types. To test for type identity,
-// compare the Types directly.
-func (p *PtrType) String() string {
-	return "*" + p.Type.String()
-}
-
-// Elem returns a type's element type.
-// It panics if the type's Kind is not Array, Chan, Map, Ptr, or Slice.
-func (p *PtrType) Elem() Type {
-	return p.Type
-}
-
-// Pos .
-func (p *PtrType) Pos() token.Pos { return p.Node.Pos() }
-
-// End .
-func (p *PtrType) End() token.Pos { return p.Node.End() }
 
 // ArrayType array type
 type ArrayType struct {
-	*CommonType
-	elem Type
+	*superType
+	*ast.ArrayType
 }
 
-// TODO
-func newArrayType(node *ast.ArrayType, name string, pkgName string, doc *ast.CommentGroup) *CommonType {
-	return newCommonType(node, Array, name, pkgName, doc)
+func newArrayType(node *ast.ArrayType, pkgName, name func() string, doc *ast.CommentGroup) *ArrayType {
+	return &ArrayType{
+		superType: newSuperType(pkgName, name, Array, doc),
+		ArrayType: node,
+	}
 }
 
 // Kind returns the specific kind of this type.
@@ -281,13 +210,13 @@ func (a *ArrayType) Len() int {
 
 // SliceType slice
 type SliceType struct {
-	*CommonType
+	*superType
 	elem Type
 }
 
 // TODO
-func newSliceType(node *ast.ArrayType, name string, pkgName string, doc *ast.CommentGroup) *CommonType {
-	return newCommonType(node, Slice, name, pkgName, doc)
+func newSliceType(node *ast.ArrayType, name string, pkgName string, doc *ast.CommentGroup) *superType {
+	return newSuperType(node, Slice, name, pkgName, doc)
 }
 
 // Kind returns the specific kind of this type.
@@ -302,14 +231,14 @@ func (s *SliceType) Elem() Type {
 
 // MapType map
 type MapType struct {
-	*CommonType
+	*superType
 	key   Type
 	value Type
 }
 
 // TODO
-func newMapType(node *ast.MapType, name string, pkgName string, doc *ast.CommentGroup) *CommonType {
-	return newCommonType(node, Map, name, pkgName, doc)
+func newMapType(node *ast.MapType, name string, pkgName string, doc *ast.CommentGroup) *superType {
+	return newSuperType(node, Map, name, pkgName, doc)
 }
 
 // Kind returns the specific kind of this type.
@@ -329,33 +258,33 @@ func (m *MapType) Value() Type {
 
 // ChanType represents a channel type's direction.
 type ChanType struct {
-	*CommonType
+	*superType
 }
 
-func newChanType(node *ast.ChanType, name string, pkgName string, doc *ast.CommentGroup) *CommonType {
-	return newCommonType(node, Chan, name, pkgName, doc)
+func newChanType(node *ast.ChanType, name string, pkgName string, doc *ast.CommentGroup) *superType {
+	return newSuperType(node, Chan, name, pkgName, doc)
 }
 
 // ChanDir returns a channel type's direction.
 // It panics if the type's Kind is not Chan.
 func (c *ChanType) ChanDir() ast.ChanDir {
-	return c.CommonType.Node.(*ast.ChanType).Dir
+	return c.superType.Node.(*ast.ChanType).Dir
 }
 
 // InterfaceType represents a interface type.
 type InterfaceType struct {
-	*CommonType
+	*superType
 }
 
-func newInterfaceType(node *ast.InterfaceType, name string, pkgName string, doc *ast.CommentGroup, methods ...*Method) *CommonType {
-	t := newCommonType(node, Interface, name, pkgName, doc)
+func newInterfaceType(node *ast.InterfaceType, name string, pkgName string, doc *ast.CommentGroup, methods ...*Method) *superType {
+	t := newSuperType(node, Interface, name, pkgName, doc)
 	t.addMethods(methods...)
 	return t
 }
 
 // FuncType function type
 type FuncType struct {
-	*CommonType
+	*superType
 	params     []*FuncField
 	results    []*FuncField
 	isVariadic bool
@@ -363,7 +292,7 @@ type FuncType struct {
 
 func newFuncType(node *ast.FuncLit, name string, pkgName string, doc *ast.CommentGroup) *FuncType {
 	f := &FuncType{
-		CommonType: newCommonType(node, Func, name, pkgName, doc),
+		superType:  newSuperType(node, Func, name, pkgName, doc),
 		isVariadic: isVariadic(node.Type),
 	}
 	return f
@@ -412,13 +341,13 @@ func (f *FuncType) IsVariadic() bool {
 
 // StructType represents a struct type.
 type StructType struct {
-	*CommonType
+	*superType
 	fields []*StructField // sorted by offset
 }
 
 func newStructType(node *ast.StructType, name string, pkgName string, doc *ast.CommentGroup) *StructType {
 	return &StructType{
-		CommonType: newCommonType(node, Struct, name, pkgName, doc),
+		superType: newSuperType(node, Struct, name, pkgName, doc),
 	}
 }
 
@@ -474,24 +403,42 @@ func (s *StructType) FieldByName(name string) (field *StructField, found bool) {
 
 // basic types
 var (
-	BasicBool       Type = newCommonType(nil, Bool, "bool", "", nil)
-	BasicInt        Type = newCommonType(nil, Int, "int", "", nil)
-	BasicInt8       Type = newCommonType(nil, Int8, "int8", "", nil)
-	BasicInt16      Type = newCommonType(nil, Int16, "int16", "", nil)
-	BasicInt32      Type = newCommonType(nil, Int32, "int32", "", nil)
-	BasicInt64      Type = newCommonType(nil, Int64, "int64", "", nil)
-	BasicUint       Type = newCommonType(nil, Uint, "uint", "", nil)
-	BasicUint8      Type = newCommonType(nil, Uint8, "uint8", "", nil)
-	BasicUint16     Type = newCommonType(nil, Uint16, "uint16", "", nil)
-	BasicUint32     Type = newCommonType(nil, Uint32, "uint32", "", nil)
-	BasicUint64     Type = newCommonType(nil, Uint64, "uint64", "", nil)
-	BasicUintptr    Type = newCommonType(nil, Uintptr, "uintptr", "", nil)
-	BasicFloat32    Type = newCommonType(nil, Float32, "float32", "", nil)
-	BasicFloat64    Type = newCommonType(nil, Float64, "float64", "", nil)
-	BasicComplex64  Type = newCommonType(nil, Complex64, "complex64", "", nil)
-	BasicComplex128 Type = newCommonType(nil, Complex128, "complex128", "", nil)
-	BasicString     Type = newCommonType(nil, String, "string", "", nil)
+	BasicBool       Type = newBasicType("bool", Bool)
+	BasicInt        Type = newBasicType("int", Int)
+	BasicInt8       Type = newBasicType("int8", Int8)
+	BasicInt16      Type = newBasicType("int16", Int16)
+	BasicInt32      Type = newBasicType("int32", Int32)
+	BasicInt64      Type = newBasicType("int64", Int64)
+	BasicUint       Type = newBasicType("uint", Uint)
+	BasicUint8      Type = newBasicType("uint8", Uint8)
+	BasicUint16     Type = newBasicType("uint16", Uint16)
+	BasicUint32     Type = newBasicType("uint32", Uint32)
+	BasicUint64     Type = newBasicType("uint64", Uint64)
+	BasicUintptr    Type = newBasicType("uintptr", Uintptr)
+	BasicFloat32    Type = newBasicType("float32", Float32)
+	BasicFloat64    Type = newBasicType("float64", Float64)
+	BasicComplex64  Type = newBasicType("complex64", Complex64)
+	BasicComplex128 Type = newBasicType("complex128", Complex128)
+	BasicString     Type = newBasicType("string", String)
 )
+
+// BasicType basic type
+type BasicType struct {
+	ast.Node
+	*superType
+}
+
+func newBasicType(name string, kind Kind) Type {
+	return &BasicType{
+		Node: NilNode,
+		superType: newSuperType(
+			func() string { return "" },
+			func() string { return name },
+			kind,
+			nil,
+		),
+	}
+}
 
 func getBasicType(name string) (t Type, found bool) {
 	found = true

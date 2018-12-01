@@ -18,6 +18,7 @@ import (
 	"bytes"
 	"go/ast"
 	"go/format"
+	"go/token"
 	"strings"
 )
 
@@ -52,30 +53,23 @@ func (f *File) LookupPackages(currPkgName string) (pkgs []*Package, found bool) 
 	return
 }
 
-// LookupType lookup Type by type name.
-func (f *File) LookupType(name string) (t Type, found bool) {
-	name = strings.TrimLeft(name, "*")
-	// May be basic type?
-	t, found = getBasicType(name)
+// LookupTypeInFile lookup Type by type name in current file.
+func (f *File) LookupTypeInFile(name string) (t TypeNode, found bool) {
+	for _, n := range f.Types {
+		if name == n.Name() {
+			return n, true
+		}
+	}
+	return nil, false
+}
+
+// LookupTypeInModule lookup Type by type name in current module.
+func (f *File) LookupTypeInModule(name string) (t TypeNode, found bool) {
+	t, found = f.LookupTypeInPackage(name)
 	if found {
 		return
 	}
-	// May be in the current package?
-	if !strings.Contains(name, ".") {
-		if f.pkg == nil {
-			t, found = f.Types[name]
-			if found {
-				return
-			}
-		} else {
-			for _, v := range f.pkg.Files {
-				t, found = v.Types[name]
-				if found {
-					return
-				}
-			}
-		}
-	}
+	name = strings.TrimLeft(name, "*")
 	// May be in the other module packages?
 	a := strings.SplitN(name, ".", 2)
 	if len(a) == 1 {
@@ -87,7 +81,7 @@ func (f *File) LookupType(name string) (t Type, found bool) {
 	}
 	for _, p := range pkgs {
 		for _, v := range p.Files {
-			t, found = v.Types[a[1]]
+			t, found = v.LookupTypeInFile(a[1])
 			if found {
 				return
 			}
@@ -96,87 +90,50 @@ func (f *File) LookupType(name string) (t Type, found bool) {
 	return
 }
 
-func (p *Package) collectTypes() {
+// LookupTypeInPackage lookup Type by type name in current package.
+func (f *File) LookupTypeInPackage(name string) (t TypeNode, found bool) {
+	if strings.Contains(name, ".") {
+		return
+	}
+	name = strings.TrimLeft(name, "*")
+	if f.pkg == nil {
+		t, found = f.LookupTypeInFile(name)
+		if found {
+			return
+		}
+	} else {
+		for _, v := range f.pkg.Files {
+			t, found = v.LookupTypeInFile(name)
+			if found {
+				return
+			}
+		}
+	}
+	return
+}
+
+func (p *Package) collectNodes() {
 	for _, f := range p.Files {
-		f.collectTypes(false)
+		f.collectNodes(false)
 	}
 	// Waiting for types ready to do method association
 	for _, f := range p.Files {
-		f.collectMethods()
+		f.bindMethods()
 	}
 }
 
 // Use the method if no other file in the same package,
-// otherwise use *Package.collectTypes()
-func (f *File) collectTypes(collectMethods bool) {
-	f.Types = make(map[string]Type)
-	f.collectCommonTypes()
+// otherwise use *Package.collectNodes()
+func (f *File) collectNodes(singleParsing bool) {
+	f.Funcs = make(map[token.Pos]FuncNode)
 	f.collectFuncs()
+
+	f.Types = make(map[token.Pos]TypeNode)
 	f.collectStructs()
-	if collectMethods {
-		f.collectMethods()
+
+	if singleParsing {
+		f.bindMethods()
 	}
-}
-
-func (f *File) collectTypeSpecs(fn func(*ast.TypeSpec, *ast.CommentGroup)) {
-	ast.Inspect(f.File, func(n ast.Node) bool {
-		decl, ok := n.(*ast.GenDecl)
-		if !ok {
-			doc := decl.Doc
-			for _, spec := range decl.Specs {
-				if td, ok := spec.(*ast.TypeSpec); ok {
-					if td.Doc != nil {
-						doc = td.Doc
-					}
-					fn(td, doc)
-				}
-			}
-		}
-		return true
-	})
-}
-
-func (f *File) collectCommonTypes() {
-	f.collectTypeSpecs(func(node *ast.TypeSpec, doc *ast.CommentGroup) {
-		name := node.Name.Name
-		t, ok := f.newCommonTypes(name, node, doc)
-		if ok {
-			f.Types[name] = t
-		}
-	})
-}
-
-func (f *File) newCommonTypes(name string, node ast.Node, doc *ast.CommentGroup) (Type, bool) {
-	var pkgName = f.PkgName
-	switch x := node.(type) {
-	case *ast.Ident:
-		t, ok := getBasicType(x.Name)
-		if !ok || t.Name() == name {
-			return nil, false
-		}
-		return newCommonType(x, t.Kind(), name, pkgName, doc), true
-	case *ast.ChanType:
-		return newChanType(x, name, pkgName, doc), true
-	case *ast.ArrayType:
-		// TODO
-		if x.Len == nil {
-			return newSliceType(x, name, pkgName, doc), true
-		}
-		return newArrayType(x, name, pkgName, doc), true
-	case *ast.MapType:
-		// TODO
-		return newMapType(x, name, pkgName, doc), true
-	case *ast.InterfaceType:
-		// TODO
-		return newInterfaceType(x, name, pkgName, doc), true
-	case *ast.StarExpr:
-		t, ok := f.newCommonTypes(name, x.X, doc)
-		if ok {
-			return newPtrType(x, t), true
-		}
-	default:
-	}
-	return nil, false
 }
 
 func (f *File) collectFuncs() {
@@ -186,22 +143,28 @@ func (f *File) collectFuncs() {
 		switch x := n.(type) {
 		case *ast.FuncLit:
 			funcType = x.Type
-			t = newFuncType(x, "", "", nil)
+			t = f.newFuncType(nil, nil, x, nil, nil, nil)
 		case *ast.FuncDecl:
-			if x.Recv != nil {
-				return true
-			}
 			funcType = x.Type
-			t = newFuncType(&ast.FuncLit{
-				Type: x.Type,
-				Body: x.Body,
-			}, x.Name.Name, f.PkgName, x.Doc)
+			var recv *FuncField
+			if recvs := f.expandFuncFields(x.Recv); len(recvs) > 0 {
+				recv = recvs[0]
+			}
+			t = f.newFuncType(
+				&x.Name.Name,
+				x.Doc,
+				&ast.FuncLit{
+					Type: x.Type,
+					Body: x.Body,
+				},
+				recv,
+				f.expandFuncFields(funcType.Params),
+				f.expandFuncFields(funcType.Results),
+			)
 		default:
 			return true
 		}
-		t.params = f.expandFuncFields(funcType.Params)
-		t.results = f.expandFuncFields(funcType.Results)
-		f.Types[t.String()] = t
+		f.Funcs[t.Pos()] = t
 		return true
 	}
 	ast.Inspect(f.File, collectFuncs)
@@ -216,25 +179,28 @@ func (f *File) collectStructs() {
 			if !ok {
 				return true
 			}
-			st := newStructType(t, "", "", nil)
-			f.Types[st.Name()] = st
+			st := f.newStructType(nil, nil, -1, t)
+			f.Types[st.Pos()] = st
 		case *ast.GenDecl:
 			for _, spec := range x.Specs {
+				var assign = token.NoPos
 				var t ast.Expr
-				var structName string
+				var structName *string
 				var doc = x.Doc
 				switch y := spec.(type) {
 				case *ast.TypeSpec:
 					if y.Type == nil {
 						continue
 					}
-					structName = y.Name.Name
+					assign = y.Assign
+					structName = &y.Name.Name
 					t = y.Type
 					if y.Doc != nil {
 						doc = y.Doc
 					}
 				case *ast.ValueSpec:
-					structName = y.Names[0].Name
+					assign = -1
+					structName = &y.Names[0].Name
 					t = y.Type
 					if y.Doc != nil {
 						doc = y.Doc
@@ -244,8 +210,8 @@ func (f *File) collectStructs() {
 				if !ok {
 					continue
 				}
-				st := newStructType(z, structName, f.PkgName, doc)
-				f.Types[st.Name()] = st
+				st := f.newStructType(structName, doc, assign, z)
+				f.Types[st.Pos()] = st
 			}
 		}
 		return true
@@ -253,30 +219,18 @@ func (f *File) collectStructs() {
 	ast.Inspect(f.File, collectStructs)
 }
 
-func (f *File) collectMethods() {
-	collectMethods := func(n ast.Node) bool {
-		x, ok := n.(*ast.FuncDecl)
-		if !ok || x.Recv == nil || len(x.Recv.List) == 0 {
-			return true
+func (f *File) bindMethods() {
+	for _, m := range f.Funcs {
+		recv, found := m.Recv()
+		if !found {
+			continue
 		}
-		recvTypeName := x.Recv.List[0].Type.(*ast.StarExpr).X.(*ast.Ident).Name
-		r, ok := f.LookupType(recvTypeName)
-		if !ok {
-			return true
+		t, found := f.LookupTypeInPackage(recv.TypeName)
+		if !found {
+			continue
 		}
-		m := &Method{
-			FuncDecl:   x,
-			Recv:       r,
-			Name:       x.Name.Name,
-			Doc:        x.Doc,
-			Params:     f.expandFuncFields(x.Type.Params),
-			Results:    f.expandFuncFields(x.Type.Results),
-			IsVariadic: isVariadic(x.Type),
-		}
-		r.addMethods(m)
-		return true
+		t.addMethod(m)
 	}
-	ast.Inspect(f.File, collectMethods)
 }
 
 func (f *File) expandFuncFields(fieldList *ast.FieldList) (fields []*FuncField) {
