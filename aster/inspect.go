@@ -129,8 +129,9 @@ func (f *File) collectNodes(singleParsing bool) {
 	f.collectFuncs()
 
 	f.Types = make(map[token.Pos]TypeNode)
-	f.collectStructs()
 	f.collectTypesOtherThanStruct()
+	f.collectStructs()
+	f.collectStructFields()
 
 	if singleParsing {
 		f.bindMethods()
@@ -169,6 +170,54 @@ func (f *File) collectFuncs() {
 		return true
 	}
 	ast.Inspect(f.File, collectFuncs)
+}
+
+func (f *File) collectTypeSpecs(fn func(*ast.TypeSpec, *ast.CommentGroup)) {
+	ast.Inspect(f.File, func(n ast.Node) bool {
+		decl, ok := n.(*ast.GenDecl)
+		if !ok {
+			doc := decl.Doc
+			for _, spec := range decl.Specs {
+				if td, ok := spec.(*ast.TypeSpec); ok {
+					if td.Doc != nil {
+						doc = td.Doc
+					}
+					fn(td, doc)
+				}
+			}
+		}
+		return true
+	})
+}
+
+func (f *File) collectTypesOtherThanStruct() {
+	f.collectTypeSpecs(func(node *ast.TypeSpec, doc *ast.CommentGroup) {
+		namePtr := &node.Name.Name
+		var t TypeNode
+		switch x := getElem(node.Type).(type) {
+		case *ast.SelectorExpr:
+			t = f.newAliasType(namePtr, doc, node.Assign, x)
+
+		case *ast.Ident:
+			t = f.newBasicOrAliasType(namePtr, doc, node.Assign, x)
+
+		case *ast.ChanType:
+			t = f.newChanType(namePtr, doc, node.Assign, x)
+
+		case *ast.ArrayType:
+			t = f.newListType(namePtr, doc, node.Assign, x)
+
+		case *ast.MapType:
+			t = f.newMapType(namePtr, doc, node.Assign, x)
+
+		case *ast.InterfaceType:
+			t = f.newInterfaceType(namePtr, doc, node.Assign, x)
+
+		default:
+			return
+		}
+		f.Types[t.Pos()] = t
+	})
 }
 
 // collectStructs collects and maps structType nodes to their positions
@@ -220,63 +269,8 @@ func (f *File) collectStructs() {
 	ast.Inspect(f.File, collectStructs)
 }
 
-func (f *File) collectTypeSpecs(fn func(*ast.TypeSpec, *ast.CommentGroup)) {
-	ast.Inspect(f.File, func(n ast.Node) bool {
-		decl, ok := n.(*ast.GenDecl)
-		if !ok {
-			doc := decl.Doc
-			for _, spec := range decl.Specs {
-				if td, ok := spec.(*ast.TypeSpec); ok {
-					if td.Doc != nil {
-						doc = td.Doc
-					}
-					fn(td, doc)
-				}
-			}
-		}
-		return true
-	})
-}
-
-func (f *File) collectTypesOtherThanStruct() {
-	f.collectTypeSpecs(func(node *ast.TypeSpec, doc *ast.CommentGroup) {
-		namePtr := &node.Name.Name
-		var t TypeNode
-		switch x := getElem(node.Type).(type) {
-		case *ast.SelectorExpr:
-			t = f.newAliasType(namePtr, doc, node.Assign, x)
-
-		case *ast.Ident:
-			t = f.newBasicOrAliasType(namePtr, doc, node.Assign, x)
-
-		case *ast.ChanType:
-			t = f.newChanType(namePtr, doc, node.Assign, x)
-
-		case *ast.ArrayType:
-			t = f.newListType(namePtr, doc, node.Assign, x)
-
-		case *ast.MapType:
-			t = f.newMapType(namePtr, doc, node.Assign, x)
-
-		case *ast.InterfaceType:
-			t = f.newInterfaceType(namePtr, doc, node.Assign, x)
-
-		default:
-			return
-		}
-		f.Types[t.Pos()] = t
-	})
-}
-
-func getElem(e ast.Expr) ast.Expr {
-	for {
-		s, ok := e.(*ast.StarExpr)
-		if ok {
-			e = s.X
-		} else {
-			return e
-		}
-	}
+func (f *File) collectStructFields() {
+	// TODO
 }
 
 func (f *File) bindMethods() {
@@ -330,4 +324,15 @@ func (f *File) tryFormat(node ast.Node, defaultValue ...string) string {
 		return defaultValue[0]
 	}
 	return code
+}
+
+func getElem(e ast.Expr) ast.Expr {
+	for {
+		s, ok := e.(*ast.StarExpr)
+		if ok {
+			e = s.X
+		} else {
+			return e
+		}
+	}
 }
