@@ -123,23 +123,46 @@ func (s *superType) addMethod(method FuncNode) error {
 	return nil
 }
 
-// BasicType basic type
+// AliasType represents a alias type
+type AliasType struct {
+	*superType
+	ast.Expr // type node
+}
+
+func (f *File) newAliasType(namePtr *string, doc *ast.CommentGroup, assign token.Pos,
+	typ ast.Expr) *BasicType {
+	return &BasicType{
+		superType: f.newSuperType(namePtr, Suspense, doc, assign != token.NoPos),
+		Expr:      typ,
+	}
+}
+
+// BasicType represents a basic type
 type BasicType struct {
 	*superType
 	ast.Expr
 }
 
 func (f *File) newBasicType(namePtr *string, doc *ast.CommentGroup, assign token.Pos,
-	node ast.Expr) (*BasicType, bool) {
-	basicName := strings.TrimLeft(f.tryFormat(node), "*")
+	typ ast.Expr) (*BasicType, bool) {
+	basicName := strings.TrimLeft(f.tryFormat(typ), "*")
 	kind, found := getBasicKind(basicName)
 	if !found {
 		return nil, false
 	}
 	return &BasicType{
 		superType: f.newSuperType(namePtr, kind, doc, assign != token.NoPos),
-		Expr:      node,
+		Expr:      typ,
 	}, true
+}
+
+func (f *File) newBasicOrAliasType(namePtr *string, doc *ast.CommentGroup, assign token.Pos,
+	typ ast.Expr) TypeNode {
+	t, ok := f.newBasicType(namePtr, doc, assign, typ)
+	if ok {
+		return t
+	}
+	return f.newAliasType(namePtr, doc, assign, typ)
 }
 
 // ListType represents an array or slice type.
@@ -149,14 +172,14 @@ type ListType struct {
 }
 
 func (f *File) newListType(namePtr *string, doc *ast.CommentGroup, assign token.Pos,
-	node *ast.ArrayType) *ListType {
+	typ *ast.ArrayType) *ListType {
 	kind := Slice
-	if node.Len != nil {
+	if typ.Len != nil {
 		kind = Array
 	}
 	return &ListType{
 		superType: f.newSuperType(namePtr, kind, doc, assign != token.NoPos),
-		ArrayType: node,
+		ArrayType: typ,
 	}
 }
 
@@ -177,10 +200,10 @@ type MapType struct {
 }
 
 func (f *File) newMapType(namePtr *string, doc *ast.CommentGroup, assign token.Pos,
-	node *ast.MapType) *MapType {
+	typ *ast.MapType) *MapType {
 	return &MapType{
 		superType: f.newSuperType(namePtr, Map, doc, assign != token.NoPos),
-		MapType:   node,
+		MapType:   typ,
 	}
 }
 
@@ -191,10 +214,10 @@ type ChanType struct {
 }
 
 func (f *File) newChanType(namePtr *string, doc *ast.CommentGroup, assign token.Pos,
-	node *ast.ChanType) *ChanType {
+	typ *ast.ChanType) *ChanType {
 	return &ChanType{
 		superType: f.newSuperType(namePtr, Chan, doc, assign != token.NoPos),
-		ChanType:  node,
+		ChanType:  typ,
 	}
 }
 
@@ -210,10 +233,10 @@ type InterfaceType struct {
 }
 
 func (f *File) newInterfaceType(namePtr *string, doc *ast.CommentGroup, assign token.Pos,
-	node *ast.InterfaceType) *InterfaceType {
+	typ *ast.InterfaceType) *InterfaceType {
 	return &InterfaceType{
 		superType:     f.newSuperType(namePtr, Interface, doc, assign != token.NoPos),
-		InterfaceType: node,
+		InterfaceType: typ,
 	}
 }
 
@@ -225,10 +248,10 @@ type StructType struct {
 }
 
 func (f *File) newStructType(namePtr *string, doc *ast.CommentGroup, assign token.Pos,
-	node *ast.StructType) *StructType {
+	typ *ast.StructType) *StructType {
 	return &StructType{
 		superType:  f.newSuperType(namePtr, Struct, doc, assign != token.NoPos),
-		StructType: node,
+		StructType: typ,
 	}
 }
 

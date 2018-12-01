@@ -180,17 +180,6 @@ type FuncNode interface {
 	Recv() (*FuncField, bool)
 }
 
-// Method represents a single method.
-type Method struct {
-	*ast.FuncDecl
-	Name       string // method name
-	Recv       TypeNode
-	Params     []*FuncField
-	Results    []*FuncField
-	IsVariadic bool
-	Doc        *ast.CommentGroup // lead comment
-}
-
 // FuncField function params or results.
 type FuncField struct {
 	Name     string
@@ -229,6 +218,7 @@ const (
 	Func
 	Struct
 	Ptr
+	Suspense
 )
 
 func getBasicKind(basicName string) (k Kind, found bool) {
