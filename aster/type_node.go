@@ -18,9 +18,10 @@ import (
 	"fmt"
 	"go/ast"
 	"go/token"
-	"reflect"
 	"strconv"
 	"strings"
+
+	"github.com/henrylee2cn/structtag"
 )
 
 type superType struct {
@@ -261,13 +262,13 @@ func (s *StructType) addFields(field ...*StructField) {
 
 // A StructField describes a single field in a struct.
 type StructField struct {
-	Name      string    // the field name
-	Type      TypeNode  // field type
-	Tag       StructTag // field tag string
-	Index     []int     // index sequence for Type.FieldByIndex
-	Anonymous bool      // is an embedded field
-	Doc       string    // lead comment
-	Comment   string    // line comment
+	Name      string     // the field name
+	Type      TypeNode   // field type
+	Tag       *StructTag // field tag
+	Index     []int      // index sequence for Type.FieldByIndex
+	Anonymous bool       // is an embedded field
+	Doc       string     // lead comment
+	Comment   string     // line comment
 }
 
 // A StructTag is the tag string in a struct field.
@@ -278,7 +279,9 @@ type StructField struct {
 // characters other than space (U+0020 ' '), quote (U+0022 '"'),
 // and colon (U+003A ':').  Each value is quoted using U+0022 '"'
 // characters and Go string literal syntax.
-type StructTag = reflect.StructTag
+type StructTag struct {
+	*structtag.Tags
+}
 
 // NumField returns a struct type's field count.
 // It panics if the type's Kind is not Struct.
