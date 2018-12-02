@@ -161,7 +161,7 @@ type (
 		// Returns error if the FuncBlock is already exist or receiver is not the TypeBlock.
 		addMethod(FuncBlock) error
 
-		// -------------- Only for kind=Struct ---------------
+		// -------------- Only for Kind=Struct ---------------
 
 		// NumField returns a struct type's field count.
 		// It panics if the type's Kind is not Struct.
@@ -478,7 +478,7 @@ func (s *super) addMethod(FuncBlock) error {
 	panic("TODO: Coming soon!")
 }
 
-// -------------- Only for kind=Struct ---------------
+// -------------- Only for Kind=Struct ---------------
 
 // NumField returns a struct type's field count.
 func (s *super) NumField() int {
