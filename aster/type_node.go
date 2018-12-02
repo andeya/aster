@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"go/ast"
 	"go/token"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -256,31 +257,69 @@ func (f *File) newStructType(namePtr *string, doc *ast.CommentGroup, assign toke
 	}
 }
 
-func (s *StructType) addFields(field ...*StructField) {
-	s.fields = append(s.fields, field...)
-}
-
 // A StructField describes a single field in a struct.
 type StructField struct {
-	Name      string     // the field name
-	Type      TypeNode   // field type
-	Tag       *StructTag // field tag
-	Index     []int      // index sequence for Type.FieldByIndex
-	Anonymous bool       // is an embedded field
-	Doc       string     // lead comment
-	Comment   string     // line comment
+	*ast.Field
+	Tags *StructTag // field tags handler
 }
 
-// A StructTag is the tag string in a struct field.
-//
-// By convention, tag strings are a concatenation of
-// optionally space-separated key:"value" pairs.
-// Each key is a non-empty string consisting of non-control
-// characters other than space (U+0020 ' '), quote (U+0022 '"'),
-// and colon (U+003A ':').  Each value is quoted using U+0022 '"'
-// characters and Go string literal syntax.
-type StructTag struct {
-	*structtag.Tags
+func (s *StructType) setFields() {
+	expandFields(s.StructType.Fields)
+	for _, field := range s.StructType.Fields.List {
+		s.fields = append(s.fields, &StructField{
+			Field: field,
+			Tags:  newStructTag(field),
+		})
+	}
+}
+
+// Name returns field name
+func (s *StructField) Name() string {
+	if !s.Anonymous() {
+		return s.Field.Names[0].Name
+	}
+	ident, _ := getElem(s.Field.Type).(*ast.Ident)
+	if ident == nil {
+		return ""
+	}
+	return ident.Name
+}
+
+// Doc returns lead comment.
+func (s *StructField) Doc() string {
+	if s.Field.Doc == nil {
+		return ""
+	}
+	return s.Field.Doc.Text()
+}
+
+// SetDoc sets lead comment.
+func (s *StructField) SetDoc(text string) error {
+	s.Field.Doc = &ast.CommentGroup{
+		List: []*ast.Comment{{Text: text}},
+	}
+	return nil
+}
+
+// Comment returns line comment.
+func (s *StructField) Comment() string {
+	if s.Field.Comment == nil {
+		return ""
+	}
+	return s.Field.Comment.Text()
+}
+
+// SetComment sets line comment.
+func (s *StructField) SetComment(text string) error {
+	s.Field.Comment = &ast.CommentGroup{
+		List: []*ast.Comment{{Text: text}},
+	}
+	return nil
+}
+
+// Anonymous returns whether the field is an anonymous field.
+func (s *StructField) Anonymous() bool {
+	return len(s.Field.Names) == 0
 }
 
 // NumField returns a struct type's field count.
@@ -301,9 +340,108 @@ func (s *StructType) Field(i int) (field *StructField, found bool) {
 // and a boolean indicating if the field was found.
 func (s *StructType) FieldByName(name string) (field *StructField, found bool) {
 	for _, field := range s.fields {
-		if field.Name == name {
+		if field.Name() == name {
 			return field, true
 		}
 	}
 	return nil, false
+}
+
+// A StructTag is the tag string in a struct field.
+//
+// By convention, tag strings are a concatenation of
+// optionally space-separated key:"value" pairs.
+// Each key is a non-empty string consisting of non-control
+// characters other than space (U+0020 ' '), quote (U+0022 '"'),
+// and colon (U+003A ':').  Each value is quoted using U+0022 '"'
+// characters and Go string literal syntax.
+type StructTag struct {
+	field *ast.Field
+	tags  *structtag.Tags
+}
+
+func newStructTag(field *ast.Field) *StructTag {
+	tags := &StructTag{
+		field: field,
+	}
+	tags.reparse()
+	return tags
+}
+
+func (s *StructTag) reparse() (err error) {
+	var value string
+	if s.field.Tag != nil {
+		value = s.field.Tag.Value
+	}
+	s.tags, err = structtag.Parse(value)
+	if err != nil {
+		s.tags, _ = structtag.Parse("")
+	}
+	return err
+}
+
+func (s *StructTag) resetValue() {
+	sort.Sort(s.tags)
+	value := s.tags.String()
+	if value == "" {
+		s.field.Tag = nil
+	} else {
+		if s.field.Tag == nil {
+			s.field.Tag = &ast.BasicLit{}
+		}
+		s.field.Tag.Value = value
+	}
+}
+
+// Tags returns a slice of tags. The order is the original tag order unless it
+// was changed.
+func (s *StructTag) Tags() []*structtag.Tag {
+	return s.tags.Tags()
+}
+
+// AddOptions adds the given option for the given key. If the option already
+// exists it doesn't add it again.
+func (s *StructTag) AddOptions(key string, options ...string) {
+	s.tags.AddOptions(key, options...)
+	s.resetValue()
+}
+
+// Delete deletes the tag for the given keys
+func (s *StructTag) Delete(keys ...string) {
+	s.tags.Delete(keys...)
+	s.resetValue()
+}
+
+// DeleteOptions deletes the given options for the given key
+func (s *StructTag) DeleteOptions(key string, options ...string) {
+	s.tags.DeleteOptions(key, options...)
+	s.resetValue()
+}
+
+// Get returns the tag associated with the given key. If the key is present
+// in the tag the value (which may be empty) is returned. Otherwise the
+// returned value will be the empty string. The ok return value reports whether
+// the tag exists or not (which the return value is nil).
+func (s *StructTag) Get(key string) (*structtag.Tag, error) {
+	return s.tags.Get(key)
+}
+
+// Keys returns a slice of tag keys. The order is the original tag order unless it
+// was changed.
+func (s *StructTag) Keys() []string {
+	return s.tags.Keys()
+}
+
+// Set sets the given tag. If the tag key already exists it'll override it
+func (s *StructTag) Set(tag *structtag.Tag) error {
+	err := s.tags.Set(tag)
+	if err == nil {
+		s.resetValue()
+	}
+	return err
+}
+
+// String reassembles the tags into a valid literal tag field representation
+func (s *StructTag) String() string {
+	return s.tags.String()
 }

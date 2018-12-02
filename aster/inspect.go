@@ -131,7 +131,7 @@ func (f *File) collectNodes(singleParsing bool) {
 	f.Types = make(map[token.Pos]TypeNode)
 	f.collectTypesOtherThanStruct()
 	f.collectStructs()
-	f.collectStructFields()
+	f.setStructFields()
 
 	if singleParsing {
 		f.bindMethods()
@@ -269,8 +269,14 @@ func (f *File) collectStructs() {
 	ast.Inspect(f.File, collectStructs)
 }
 
-func (f *File) collectStructFields() {
-	// TODO
+func (f *File) setStructFields() {
+	for _, t := range f.Types {
+		s, ok := t.(*StructType)
+		if !ok {
+			continue
+		}
+		s.setFields()
+	}
 }
 
 func (f *File) bindMethods() {
@@ -285,6 +291,31 @@ func (f *File) bindMethods() {
 		}
 		t.addMethod(m)
 	}
+}
+
+// TODO maybe bug
+func expandFields(fieldList *ast.FieldList) {
+	if fieldList == nil {
+		return
+	}
+	var list = make([]*ast.Field, 0, fieldList.NumFields())
+	for _, g := range fieldList.List {
+		list = append(list, g)
+		if len(g.Names) > 1 {
+			for _, name := range g.Names[1:] {
+				list = append(list,
+					&ast.Field{
+						Doc:     g.Doc,
+						Names:   []*ast.Ident{name},
+						Type:    g.Type,
+						Tag:     g.Tag,
+						Comment: g.Comment,
+					})
+			}
+			g.Names = g.Names[:1]
+		}
+	}
+	fieldList.List = list
 }
 
 func (f *File) expandFuncFields(fieldList *ast.FieldList) (fields []*FuncField) {
