@@ -292,28 +292,22 @@ func (f *File) bindMethods() {
 	}
 }
 
-// TODO maybe bug
 func expandFields(fieldList *ast.FieldList) {
 	if fieldList == nil {
 		return
 	}
 	var list = make([]*ast.Field, 0, fieldList.NumFields())
-	for _, g := range fieldList.List {
-		list = append(list, g)
-		if len(g.Names) > 1 {
-			for _, name := range g.Names[1:] {
-				list = append(list,
-					&ast.Field{
-						Doc:     cloneCommentGroup(g.Doc), // BUG: invalid pos
-						Names:   []*ast.Ident{name},
-						Type:    g.Type,
-						Tag:     cloneBasicLit(g.Tag),
-						Comment: cloneCommentGroup(g.Comment), // BUG: invalid pos
-					})
+	for _, field := range fieldList.List {
+		list = append(list, field)
+		if len(field.Names) > 1 {
+			for _, name := range field.Names[1:] {
+				list = append(list, &ast.Field{
+					Names: []*ast.Ident{cloneIdent(name)},
+					Type:  field.Type,
+					Tag:   cloneBasicLit(field.Tag),
+				})
 			}
-			g.Names = g.Names[:1]
-			g.Doc = cloneCommentGroup(g.Doc)         // BUG: invalid pos
-			g.Comment = cloneCommentGroup(g.Comment) // BUG: invalid pos
+			field.Names = field.Names[:1]
 		}
 	}
 	fieldList.List = list
@@ -372,6 +366,13 @@ func getElem(e ast.Expr) ast.Expr {
 	}
 }
 
+func cloneIdent(i *ast.Ident) *ast.Ident {
+	return &ast.Ident{
+		Name: i.Name,
+		Obj:  i.Obj,
+	}
+}
+
 func cloneBasicLit(b *ast.BasicLit) *ast.BasicLit {
 	if b == nil {
 		return nil
@@ -382,13 +383,15 @@ func cloneBasicLit(b *ast.BasicLit) *ast.BasicLit {
 	}
 }
 
-func cloneCommentGroup(c *ast.CommentGroup) *ast.CommentGroup {
-	if c == nil {
-		return nil
-	}
-	n := new(ast.CommentGroup)
-	for _, v := range c.List {
-		n.List = append(n.List, &ast.Comment{Text: v.Text})
-	}
-	return n
-}
+// func cloneCommentGroup(c *ast.CommentGroup) *ast.CommentGroup {
+// 	if c == nil {
+// 		return nil
+// 	}
+// 	n := new(ast.CommentGroup)
+// 	for _, v := range c.List {
+// 		n.List = append(n.List, &ast.Comment{
+// 			Text: v.Text,
+// 		})
+// 	}
+// 	return n
+// }

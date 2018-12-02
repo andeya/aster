@@ -16,7 +16,6 @@
 package aster
 
 import (
-	"errors"
 	"go/ast"
 	"go/parser"
 	"go/token"
@@ -100,16 +99,9 @@ type ExtNode interface {
 
 	// Doc returns lead comment.
 	Doc() string
-
-	// SetDoc sets lead comment.
-	// NOTE: returns errror if Name==""
-	SetDoc(string) error
 }
 
 // TypeNode is the representation of a Go type node.
-//
-//
-//
 type TypeNode interface {
 	ExtNode
 	typeNode() // only as identify method
@@ -311,15 +303,4 @@ func (s *super) Doc() string {
 		return ""
 	}
 	return s.doc.Text()
-}
-
-// SetDoc sets lead comment.
-func (s *super) SetDoc(text string) error {
-	if s.Name() == "" {
-		return errors.New("anonymous type cannot set document")
-	}
-	s.doc = &ast.CommentGroup{
-		List: []*ast.Comment{{Text: text}},
-	}
-	return nil
 }

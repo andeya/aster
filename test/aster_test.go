@@ -1,6 +1,7 @@
 package test
 
 import (
+	"bytes"
 	"go/format"
 	"testing"
 
@@ -10,9 +11,11 @@ import (
 func TestStruct(t *testing.T) {
 	var src = []byte(`package test
 type S struct {
-	// xyz comment
-	A,B,C int ` + "`json:\"xyz\"`" + `// abc comment
-	D string
+	// a doc
+	A string` + "`json:\"a\"`" + ` // a comment
+	// bcd doc
+	B,C,D int // line comment
+	E int
 }
 `)
 	src, err := format.Source(src)
@@ -33,7 +36,6 @@ type S struct {
 	if !ok {
 		t.FailNow()
 	}
-
 	aField.Tags.AddOptions("json", "omitempty")
 
 	bField, ok := s.(*aster.StructType).FieldByName("B")
@@ -42,21 +44,39 @@ type S struct {
 	}
 	bField.Tags.Set(&aster.Tag{
 		Key:     "json",
-		Name:    "bb",
+		Name:    "b",
 		Options: []string{"omitempty"},
 	})
 
-	cField, _ := s.(*aster.StructType).FieldByName("C")
+	dField, ok := s.(*aster.StructType).FieldByName("D")
+	if !ok {
+		t.FailNow()
+	}
+	dField.Tags.Set(&aster.Tag{
+		Key:     "json",
+		Name:    "d",
+		Options: []string{"omitempty"},
+	})
+
+	eField, ok := s.(*aster.StructType).FieldByName("E")
+	if !ok {
+		t.FailNow()
+	}
+	eField.Tags.Set(&aster.Tag{
+		Key:  "json",
+		Name: "e",
+	})
+
+	var dst bytes.Buffer
+	err = format.Node(&dst, f.FileSet, s.(*aster.StructType).StructType)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Log(dst.String())
 
 	ret, err := f.Format(f.File)
 	if err != nil {
 		t.Fatal(err)
 	}
 	t.Log(ret)
-
-	// BUG: test comment
-	aField.SetComment("a comment")
-	t.Logf("S.A comment: %s", aField.Comment())
-	t.Logf("S.A doc: %s", aField.Doc())
-	t.Logf("S.C doc: %s", cField.Doc())
 }

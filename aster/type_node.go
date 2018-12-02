@@ -293,28 +293,12 @@ func (s *StructField) Doc() string {
 	return s.Field.Doc.Text()
 }
 
-// SetDoc sets lead comment.
-func (s *StructField) SetDoc(text string) error {
-	s.Field.Doc = &ast.CommentGroup{
-		List: []*ast.Comment{{Text: text}},
-	}
-	return nil
-}
-
 // Comment returns line comment.
 func (s *StructField) Comment() string {
 	if s.Field.Comment == nil {
 		return ""
 	}
 	return s.Field.Comment.Text()
-}
-
-// SetComment sets line comment.
-func (s *StructField) SetComment(text string) error {
-	s.Field.Comment = &ast.CommentGroup{
-		List: []*ast.Comment{{Text: text}},
-	}
-	return nil
 }
 
 // Anonymous returns whether the field is an anonymous field.
