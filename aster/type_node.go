@@ -371,7 +371,7 @@ func newStructTag(field *ast.Field) *StructTag {
 func (s *StructTag) reparse() (err error) {
 	var value string
 	if s.field.Tag != nil {
-		value = s.field.Tag.Value
+		value = strings.Trim(s.field.Tag.Value, "`")
 	}
 	s.tags, err = structtag.Parse(value)
 	if err != nil {
@@ -389,13 +389,31 @@ func (s *StructTag) resetValue() {
 		if s.field.Tag == nil {
 			s.field.Tag = &ast.BasicLit{}
 		}
-		s.field.Tag.Value = value
+		s.field.Tag.Value = "`" + value + "`"
 	}
 }
 
+// Tag defines a single struct's string literal tag
+//
+// type Tag struct {
+// Key is the tag key, such as json, xml, etc..
+// i.e: `json:"foo,omitempty". Here key is: "json"
+// Key string
+//
+// Name is a part of the value
+// i.e: `json:"foo,omitempty". Here name is: "foo"
+// Name string
+//
+// Options is a part of the value. It contains a slice of tag options i.e:
+// `json:"foo,omitempty". Here options is: ["omitempty"]
+// Options []string
+// }
+//
+type Tag = structtag.Tag
+
 // Tags returns a slice of tags. The order is the original tag order unless it
 // was changed.
-func (s *StructTag) Tags() []*structtag.Tag {
+func (s *StructTag) Tags() []*Tag {
 	return s.tags.Tags()
 }
 
@@ -422,7 +440,7 @@ func (s *StructTag) DeleteOptions(key string, options ...string) {
 // in the tag the value (which may be empty) is returned. Otherwise the
 // returned value will be the empty string. The ok return value reports whether
 // the tag exists or not (which the return value is nil).
-func (s *StructTag) Get(key string) (*structtag.Tag, error) {
+func (s *StructTag) Get(key string) (*Tag, error) {
 	return s.tags.Get(key)
 }
 
@@ -433,7 +451,7 @@ func (s *StructTag) Keys() []string {
 }
 
 // Set sets the given tag. If the tag key already exists it'll override it
-func (s *StructTag) Set(tag *structtag.Tag) error {
+func (s *StructTag) Set(tag *Tag) error {
 	err := s.tags.Set(tag)
 	if err == nil {
 		s.resetValue()

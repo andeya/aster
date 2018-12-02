@@ -304,16 +304,16 @@ func expandFields(fieldList *ast.FieldList) {
 			for _, name := range g.Names[1:] {
 				list = append(list,
 					&ast.Field{
-						// Doc:     cloneCommentGroup(g.Doc),
-						Names: []*ast.Ident{name},
-						Type:  g.Type,
-						Tag:   cloneBasicLit(g.Tag),
-						// Comment: cloneCommentGroup(g.Comment),
+						Doc:     cloneCommentGroup(g.Doc), // BUG: invalid pos
+						Names:   []*ast.Ident{name},
+						Type:    g.Type,
+						Tag:     cloneBasicLit(g.Tag),
+						Comment: cloneCommentGroup(g.Comment), // BUG: invalid pos
 					})
 			}
 			g.Names = g.Names[:1]
-			// g.Doc = cloneCommentGroup(g.Doc)
-			// g.Comment = cloneCommentGroup(g.Comment)
+			g.Doc = cloneCommentGroup(g.Doc)         // BUG: invalid pos
+			g.Comment = cloneCommentGroup(g.Comment) // BUG: invalid pos
 		}
 	}
 	fieldList.List = list
