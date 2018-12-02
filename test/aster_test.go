@@ -26,7 +26,7 @@ type S struct {
 	if err != nil {
 		t.Fatal(err)
 	}
-	s, ok := f.LookupTypeBlock("S")
+	s, ok := f.LookupType("S")
 	if !ok {
 		t.FailNow()
 	}

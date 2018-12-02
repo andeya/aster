@@ -28,7 +28,7 @@ import (
 type superType struct {
 	*super
 	isAssign bool // is there `=` for declared type?
-	methods  []FuncBlock
+	methods  []FuncNode
 }
 
 func (f *File) newSuperType(namePtr *string, kind Kind, doc *ast.CommentGroup,
@@ -39,7 +39,7 @@ func (f *File) newSuperType(namePtr *string, kind Kind, doc *ast.CommentGroup,
 	}
 }
 
-func (s *superType) typeBlockIdentify() {}
+func (s *superType) typeNodeIdentify() {}
 
 // IsAssign is there `=` for declared type?
 func (s *superType) IsAssign() bool {
@@ -54,7 +54,7 @@ func (s *superType) IsAssign() bool {
 //
 // For an interface type, the returned Method's Type field gives the
 // method signature, without a receiver, and the Func field is nil.
-func (s *superType) Method(i int) (FuncBlock, bool) {
+func (s *superType) Method(i int) (FuncNode, bool) {
 	if i < 0 || i >= len(s.methods) {
 		return nil, false
 	}
@@ -69,7 +69,7 @@ func (s *superType) Method(i int) (FuncBlock, bool) {
 //
 // For an interface type, the returned Method's Type field gives the
 // method signature, without a receiver, and the Func field is nil.
-func (s *superType) MethodByName(name string) (FuncBlock, bool) {
+func (s *superType) MethodByName(name string) (FuncNode, bool) {
 	for _, m := range s.methods {
 		if m.Name() == name {
 			return m, true
@@ -84,7 +84,7 @@ func (s *superType) NumMethod() int {
 }
 
 // Implements reports whether the type implements the interface type u.
-func (s *superType) Implements(u TypeBlock) bool {
+func (s *superType) Implements(u TypeNode) bool {
 	for i := u.NumMethod() - 1; i >= 0; i-- {
 		um, _ := u.Method(i)
 		cm, ok := s.MethodByName(um.Name())
@@ -112,7 +112,7 @@ func (s *superType) Implements(u TypeBlock) bool {
 	return true
 }
 
-func (s *superType) addMethod(method FuncBlock) error {
+func (s *superType) addMethod(method FuncNode) error {
 	field, ok := method.Recv()
 	if !ok {
 		return fmt.Errorf("not method: %s", method.Name())
@@ -131,8 +131,8 @@ type AliasType struct {
 	ast.Expr // type node
 }
 
-var _ Block = (*AliasType)(nil)
-var _ TypeBlock = (*AliasType)(nil)
+var _ Node = (*AliasType)(nil)
+var _ TypeNode = (*AliasType)(nil)
 
 func (f *File) newAliasType(namePtr *string, doc *ast.CommentGroup, assign token.Pos,
 	typ ast.Expr) *BasicType {
@@ -153,8 +153,8 @@ type BasicType struct {
 	ast.Expr
 }
 
-var _ Block = (*BasicType)(nil)
-var _ TypeBlock = (*BasicType)(nil)
+var _ Node = (*BasicType)(nil)
+var _ TypeNode = (*BasicType)(nil)
 
 func (f *File) newBasicType(namePtr *string, doc *ast.CommentGroup, assign token.Pos,
 	typ ast.Expr) (*BasicType, bool) {
@@ -170,7 +170,7 @@ func (f *File) newBasicType(namePtr *string, doc *ast.CommentGroup, assign token
 }
 
 func (f *File) newBasicOrAliasType(namePtr *string, doc *ast.CommentGroup, assign token.Pos,
-	typ ast.Expr) Block {
+	typ ast.Expr) Node {
 	t, ok := f.newBasicType(namePtr, doc, assign, typ)
 	if ok {
 		return t
@@ -189,8 +189,8 @@ type ListType struct {
 	*ast.ArrayType
 }
 
-var _ Block = (*ListType)(nil)
-var _ TypeBlock = (*ListType)(nil)
+var _ Node = (*ListType)(nil)
+var _ TypeNode = (*ListType)(nil)
 
 func (f *File) newListType(namePtr *string, doc *ast.CommentGroup, assign token.Pos,
 	typ *ast.ArrayType) *ListType {
@@ -225,8 +225,8 @@ type MapType struct {
 	*ast.MapType
 }
 
-var _ Block = (*MapType)(nil)
-var _ TypeBlock = (*MapType)(nil)
+var _ Node = (*MapType)(nil)
+var _ TypeNode = (*MapType)(nil)
 
 func (f *File) newMapType(namePtr *string, doc *ast.CommentGroup, assign token.Pos,
 	typ *ast.MapType) *MapType {
@@ -247,8 +247,8 @@ type ChanType struct {
 	*ast.ChanType
 }
 
-var _ Block = (*ChanType)(nil)
-var _ TypeBlock = (*ChanType)(nil)
+var _ Node = (*ChanType)(nil)
+var _ TypeNode = (*ChanType)(nil)
 
 func (f *File) newChanType(namePtr *string, doc *ast.CommentGroup, assign token.Pos,
 	typ *ast.ChanType) *ChanType {
@@ -274,8 +274,8 @@ type InterfaceType struct {
 	*ast.InterfaceType
 }
 
-var _ Block = (*InterfaceType)(nil)
-var _ TypeBlock = (*InterfaceType)(nil)
+var _ Node = (*InterfaceType)(nil)
+var _ TypeNode = (*InterfaceType)(nil)
 
 func (f *File) newInterfaceType(namePtr *string, doc *ast.CommentGroup, assign token.Pos,
 	typ *ast.InterfaceType) *InterfaceType {
@@ -297,8 +297,8 @@ type StructType struct {
 	fields []*StructField // sorted by offset
 }
 
-var _ Block = (*StructType)(nil)
-var _ TypeBlock = (*StructType)(nil)
+var _ Node = (*StructType)(nil)
+var _ TypeNode = (*StructType)(nil)
 
 func (f *File) newStructType(namePtr *string, doc *ast.CommentGroup, assign token.Pos,
 	typ *ast.StructType) *StructType {

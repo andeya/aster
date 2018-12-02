@@ -73,7 +73,7 @@ type File struct {
 	Src      []byte
 	mode     parser.Mode
 	Imports  []*Import
-	Blocks   map[token.Pos]Block // <type node pos, Block>
+	Nodes    map[token.Pos]Node // <type node pos, Node>
 }
 
 // Import import info
@@ -85,33 +85,33 @@ type Import struct {
 }
 
 type (
-	// Block the basic sub-interface based on ast.Node extension,
+	// Node the basic sub-interface based on ast.Node extension,
 	// is the supertype of other extended interfaces.
-	Block interface {
-		CommBlockMethods
-		FuncBlockMethods
-		TypeBlockMethods
+	Node interface {
+		CommNodeMethods
+		FuncNodeMethods
+		TypeNodeMethods
 		blockIdentify() // only as identify method
 	}
-	// FuncBlock is the representation of a Go function or method.
+	// FuncNode is the representation of a Go function or method.
 	// NOTE: Kind = Func
-	FuncBlock interface {
-		CommBlockMethods
-		FuncBlockMethods
-		funcBlockIdentify() // only as identify method
+	FuncNode interface {
+		CommNodeMethods
+		FuncNodeMethods
+		funcNodeIdentify() // only as identify method
 	}
-	// TypeBlock is the representation of a Go type node.
+	// TypeNode is the representation of a Go type node.
 	// NOTE: Kind != Func
-	TypeBlock interface {
-		CommBlockMethods
-		TypeBlockMethods
-		typeBlockIdentify() // only as identify method
+	TypeNode interface {
+		CommNodeMethods
+		TypeNodeMethods
+		typeNodeIdentify() // only as identify method
 	}
 )
 
 type (
-	// CommBlockMethods is the common methods of block interface.
-	CommBlockMethods interface {
+	// CommNodeMethods is the common methods of block interface.
+	CommNodeMethods interface {
 		// Node returns origin AST node.
 		Node() ast.Node
 
@@ -126,9 +126,9 @@ type (
 		Doc() string
 	}
 
-	// TypeBlockMethods is the representation of a Go type node.
+	// TypeNodeMethods is the representation of a Go type node.
 	// NOTE: Kind != Func
-	TypeBlockMethods interface {
+	TypeNodeMethods interface {
 		// IsAssign is there `=` for declared type?
 		IsAssign() bool
 
@@ -141,7 +141,7 @@ type (
 		//
 		// For an interface type, the returned Method's Type field gives the
 		// method signature, without a receiver, and the Func field is nil.
-		Method(int) (FuncBlock, bool)
+		Method(int) (FuncNode, bool)
 
 		// MethodByName returns the method with that name in the type's
 		// method set and a boolean indicating if the method was found.
@@ -151,15 +151,15 @@ type (
 		//
 		// For an interface type, the returned Method's Type field gives the
 		// method signature, without a receiver, and the Func field is nil.
-		MethodByName(string) (FuncBlock, bool)
+		MethodByName(string) (FuncNode, bool)
 
 		// Implements reports whether the type implements the interface type u.
-		Implements(u TypeBlock) bool
+		Implements(u TypeNode) bool
 
-		// addMethod adds a FuncBlock as method.
+		// addMethod adds a FuncNode as method.
 		//
-		// Returns error if the FuncBlock is already exist or receiver is not the TypeBlock.
-		addMethod(FuncBlock) error
+		// Returns error if the FuncNode is already exist or receiver is not the TypeNode.
+		addMethod(FuncNode) error
 
 		// -------------- Only for Kind=Struct ---------------
 
@@ -175,9 +175,9 @@ type (
 		FieldByName(name string) (field *StructField, found bool)
 	}
 
-	// FuncBlockMethods is the representation of a Go function or method.
+	// FuncNodeMethods is the representation of a Go function or method.
 	// NOTE: Kind = Func
-	FuncBlockMethods interface {
+	FuncNodeMethods interface {
 		// NumParam returns a function type's input parameter count.
 		NumParam() int
 
@@ -402,15 +402,15 @@ func (s *super) Recv() (*FuncField, bool) {
 	panic("TODO: Coming soon!")
 }
 
-// IsFuncBlock returns true if b is implementd FuncBlock.
-func IsFuncBlock(b Block) bool {
-	_, ok := b.(FuncBlock)
+// IsFuncNode returns true if b is implementd FuncNode.
+func IsFuncNode(b Node) bool {
+	_, ok := b.(FuncNode)
 	return ok
 }
 
-// IsTypeBlock returns true if b is implementd TypeBlock.
-func IsTypeBlock(b Block) bool {
-	_, ok := b.(TypeBlock)
+// IsTypeNode returns true if b is implementd TypeNode.
+func IsTypeNode(b Node) bool {
+	_, ok := b.(TypeNode)
 	return ok
 }
 
@@ -438,7 +438,7 @@ func (s *super) NumMethod() int {
 //
 // For an interface type, the returned Method's Type field gives the
 // method signature, without a receiver, and the Func field is nil.
-func (s *super) Method(int) (FuncBlock, bool) {
+func (s *super) Method(int) (FuncNode, bool) {
 	if s.kind == Func {
 		panic("Kind cant not be aster.Func!")
 	}
@@ -453,7 +453,7 @@ func (s *super) Method(int) (FuncBlock, bool) {
 //
 // For an interface type, the returned Method's Type field gives the
 // method signature, without a receiver, and the Func field is nil.
-func (s *super) MethodByName(string) (FuncBlock, bool) {
+func (s *super) MethodByName(string) (FuncNode, bool) {
 	if s.kind == Func {
 		panic("Kind cant not be aster.Func!")
 	}
@@ -461,17 +461,17 @@ func (s *super) MethodByName(string) (FuncBlock, bool) {
 }
 
 // Implements reports whether the type implements the interface type u.
-func (s *super) Implements(u TypeBlock) bool {
+func (s *super) Implements(u TypeNode) bool {
 	if s.kind == Func {
 		panic("Kind cant not be aster.Func!")
 	}
 	panic("TODO: Coming soon!")
 }
 
-// addMethod adds a FuncBlock as method.
+// addMethod adds a FuncNode as method.
 //
-// Returns error if the FuncBlock is already exist or receiver is not the TypeBlock.
-func (s *super) addMethod(FuncBlock) error {
+// Returns error if the FuncNode is already exist or receiver is not the TypeNode.
+func (s *super) addMethod(FuncNode) error {
 	if s.kind == Func {
 		panic("Kind cant not be aster.Func!")
 	}

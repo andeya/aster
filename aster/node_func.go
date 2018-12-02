@@ -27,10 +27,10 @@ type FuncDecl struct {
 	results []*FuncField
 }
 
-var _ Block = (*FuncDecl)(nil)
-var _ FuncBlock = (*FuncDecl)(nil)
+var _ Node = (*FuncDecl)(nil)
+var _ FuncNode = (*FuncDecl)(nil)
 
-func (f *File) newFuncBlock(namePtr *string, doc *ast.CommentGroup,
+func (f *File) newFuncNode(namePtr *string, doc *ast.CommentGroup,
 	node *ast.FuncLit, recv *FuncField, params, results []*FuncField) *FuncDecl {
 	ft := &FuncDecl{
 		super:   f.newSuper(namePtr, Func, doc),
@@ -42,7 +42,7 @@ func (f *File) newFuncBlock(namePtr *string, doc *ast.CommentGroup,
 	return ft
 }
 
-func (f *FuncDecl) funcBlockIdentify() {}
+func (f *FuncDecl) funcNodeIdentify() {}
 
 // Node returns origin AST node.
 func (f *FuncDecl) Node() ast.Node {
