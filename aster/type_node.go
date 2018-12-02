@@ -147,7 +147,7 @@ type BasicType struct {
 
 func (f *File) newBasicType(namePtr *string, doc *ast.CommentGroup, assign token.Pos,
 	typ ast.Expr) (*BasicType, bool) {
-	basicName := strings.TrimLeft(f.tryFormat(typ), "*")
+	basicName := strings.TrimLeft(f.TryFormat(typ), "*")
 	kind, found := getBasicKind(basicName)
 	if !found {
 		return nil, false

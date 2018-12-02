@@ -174,8 +174,7 @@ func (f *File) collectFuncs() {
 
 func (f *File) collectTypeSpecs(fn func(*ast.TypeSpec, *ast.CommentGroup)) {
 	ast.Inspect(f.File, func(n ast.Node) bool {
-		decl, ok := n.(*ast.GenDecl)
-		if !ok {
+		if decl, ok := n.(*ast.GenDecl); ok {
 			doc := decl.Doc
 			for _, spec := range decl.Specs {
 				if td, ok := spec.(*ast.TypeSpec); ok {
@@ -305,14 +304,16 @@ func expandFields(fieldList *ast.FieldList) {
 			for _, name := range g.Names[1:] {
 				list = append(list,
 					&ast.Field{
-						Doc:     g.Doc,
-						Names:   []*ast.Ident{name},
-						Type:    g.Type,
-						Tag:     g.Tag,
-						Comment: g.Comment,
+						// Doc:     cloneCommentGroup(g.Doc),
+						Names: []*ast.Ident{name},
+						Type:  g.Type,
+						Tag:   cloneBasicLit(g.Tag),
+						// Comment: cloneCommentGroup(g.Comment),
 					})
 			}
 			g.Names = g.Names[:1]
+			// g.Doc = cloneCommentGroup(g.Doc)
+			// g.Comment = cloneCommentGroup(g.Comment)
 		}
 	}
 	fieldList.List = list
@@ -321,7 +322,7 @@ func expandFields(fieldList *ast.FieldList) {
 func (f *File) expandFuncFields(fieldList *ast.FieldList) (fields []*FuncField) {
 	if fieldList != nil {
 		for _, g := range fieldList.List {
-			typeName := f.tryFormat(g.Type)
+			typeName := f.TryFormat(g.Type)
 			m := len(g.Names)
 			if m == 0 {
 				fields = append(fields, &FuncField{
@@ -340,7 +341,8 @@ func (f *File) expandFuncFields(fieldList *ast.FieldList) (fields []*FuncField) 
 	return
 }
 
-func (f *File) format(node ast.Node) (code string, err error) {
+// Format format the node and returns the string.
+func (f *File) Format(node ast.Node) (code string, err error) {
 	var dst bytes.Buffer
 	err = format.Node(&dst, f.FileSet, node)
 	if err != nil {
@@ -349,8 +351,10 @@ func (f *File) format(node ast.Node) (code string, err error) {
 	return dst.String(), nil
 }
 
-func (f *File) tryFormat(node ast.Node, defaultValue ...string) string {
-	code, err := f.format(node)
+// TryFormat format the node and returns the string,
+// returns the default string if fail.
+func (f *File) TryFormat(node ast.Node, defaultValue ...string) string {
+	code, err := f.Format(node)
 	if err != nil && len(defaultValue) > 0 {
 		return defaultValue[0]
 	}
@@ -366,4 +370,25 @@ func getElem(e ast.Expr) ast.Expr {
 			return e
 		}
 	}
+}
+
+func cloneBasicLit(b *ast.BasicLit) *ast.BasicLit {
+	if b == nil {
+		return nil
+	}
+	return &ast.BasicLit{
+		Kind:  b.Kind,
+		Value: b.Value,
+	}
+}
+
+func cloneCommentGroup(c *ast.CommentGroup) *ast.CommentGroup {
+	if c == nil {
+		return nil
+	}
+	n := new(ast.CommentGroup)
+	for _, v := range c.List {
+		n.List = append(n.List, &ast.Comment{Text: v.Text})
+	}
+	return n
 }

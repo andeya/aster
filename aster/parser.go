@@ -86,7 +86,7 @@ func (m *Module) Reparse() (first error) {
 // are returned via a scanner.ErrorList which is sorted by file position.
 //
 func ParseFile(filename string, src interface{}, mode ...parser.Mode) (f *File, err error) {
-	b, err := readSource(f.Filename, f.Src)
+	b, err := readSource(filename, src)
 	if err != nil {
 		return nil, err
 	}
