@@ -80,6 +80,7 @@ type File struct {
 
 // Import import info
 type Import struct {
+	*ast.ImportSpec
 	Name string
 	Path string
 	Doc  *ast.CommentGroup
@@ -193,6 +194,7 @@ type Kind uint
 // Kind enumerate
 const (
 	Invalid Kind = iota
+	Suspense
 	Bool
 	Int
 	Int8
@@ -217,8 +219,7 @@ const (
 	Map
 	Func
 	Struct
-	Ptr
-	Suspense
+	// Ptr
 )
 
 func getBasicKind(basicName string) (k Kind, found bool) {

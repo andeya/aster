@@ -126,8 +126,9 @@ func (f *File) Reparse() (err error) {
 func (f *File) setImports() {
 	for _, v := range f.File.Imports {
 		imp := &Import{
-			Path: v.Path.Value[1 : len(v.Path.Value)-1],
-			Doc:  v.Doc,
+			ImportSpec: v,
+			Path:       v.Path.Value[1 : len(v.Path.Value)-1],
+			Doc:        v.Doc,
 		}
 		if v.Name != nil {
 			imp.Name = v.Name.Name
