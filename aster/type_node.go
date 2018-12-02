@@ -28,7 +28,7 @@ import (
 type superType struct {
 	*super
 	isAssign bool // is there `=` for declared type?
-	methods  []FuncNode
+	methods  []FuncBlock
 }
 
 func (f *File) newSuperType(namePtr *string, kind Kind, doc *ast.CommentGroup,
@@ -39,7 +39,7 @@ func (f *File) newSuperType(namePtr *string, kind Kind, doc *ast.CommentGroup,
 	}
 }
 
-func (s *superType) typeNode() {}
+func (s *superType) typeBlockIdentify() {}
 
 // IsAssign is there `=` for declared type?
 func (s *superType) IsAssign() bool {
@@ -54,7 +54,7 @@ func (s *superType) IsAssign() bool {
 //
 // For an interface type, the returned Method's Type field gives the
 // method signature, without a receiver, and the Func field is nil.
-func (s *superType) Method(i int) (FuncNode, bool) {
+func (s *superType) Method(i int) (FuncBlock, bool) {
 	if i < 0 || i >= len(s.methods) {
 		return nil, false
 	}
@@ -69,7 +69,7 @@ func (s *superType) Method(i int) (FuncNode, bool) {
 //
 // For an interface type, the returned Method's Type field gives the
 // method signature, without a receiver, and the Func field is nil.
-func (s *superType) MethodByName(name string) (FuncNode, bool) {
+func (s *superType) MethodByName(name string) (FuncBlock, bool) {
 	for _, m := range s.methods {
 		if m.Name() == name {
 			return m, true
@@ -84,7 +84,7 @@ func (s *superType) NumMethod() int {
 }
 
 // Implements reports whether the type implements the interface type u.
-func (s *superType) Implements(u TypeNode) bool {
+func (s *superType) Implements(u TypeBlock) bool {
 	for i := u.NumMethod() - 1; i >= 0; i-- {
 		um, _ := u.Method(i)
 		cm, ok := s.MethodByName(um.Name())
@@ -112,7 +112,7 @@ func (s *superType) Implements(u TypeNode) bool {
 	return true
 }
 
-func (s *superType) addMethod(method FuncNode) error {
+func (s *superType) addMethod(method FuncBlock) error {
 	field, ok := method.Recv()
 	if !ok {
 		return fmt.Errorf("not method: %s", method.Name())
@@ -131,6 +131,9 @@ type AliasType struct {
 	ast.Expr // type node
 }
 
+var _ Block = (*AliasType)(nil)
+var _ TypeBlock = (*AliasType)(nil)
+
 func (f *File) newAliasType(namePtr *string, doc *ast.CommentGroup, assign token.Pos,
 	typ ast.Expr) *BasicType {
 	return &BasicType{
@@ -139,11 +142,19 @@ func (f *File) newAliasType(namePtr *string, doc *ast.CommentGroup, assign token
 	}
 }
 
+// Node returns origin AST node.
+func (a *AliasType) Node() ast.Node {
+	return a.Expr
+}
+
 // BasicType represents a basic type
 type BasicType struct {
 	*superType
 	ast.Expr
 }
+
+var _ Block = (*BasicType)(nil)
+var _ TypeBlock = (*BasicType)(nil)
 
 func (f *File) newBasicType(namePtr *string, doc *ast.CommentGroup, assign token.Pos,
 	typ ast.Expr) (*BasicType, bool) {
@@ -159,7 +170,7 @@ func (f *File) newBasicType(namePtr *string, doc *ast.CommentGroup, assign token
 }
 
 func (f *File) newBasicOrAliasType(namePtr *string, doc *ast.CommentGroup, assign token.Pos,
-	typ ast.Expr) TypeNode {
+	typ ast.Expr) Block {
 	t, ok := f.newBasicType(namePtr, doc, assign, typ)
 	if ok {
 		return t
@@ -167,11 +178,19 @@ func (f *File) newBasicOrAliasType(namePtr *string, doc *ast.CommentGroup, assig
 	return f.newAliasType(namePtr, doc, assign, typ)
 }
 
+// Node returns origin AST node.
+func (b *BasicType) Node() ast.Node {
+	return b.Expr
+}
+
 // ListType represents an array or slice type.
 type ListType struct {
 	*superType
 	*ast.ArrayType
 }
+
+var _ Block = (*ListType)(nil)
+var _ TypeBlock = (*ListType)(nil)
 
 func (f *File) newListType(namePtr *string, doc *ast.CommentGroup, assign token.Pos,
 	typ *ast.ArrayType) *ListType {
@@ -183,6 +202,11 @@ func (f *File) newListType(namePtr *string, doc *ast.CommentGroup, assign token.
 		superType: f.newSuperType(namePtr, kind, doc, assign != token.NoPos),
 		ArrayType: typ,
 	}
+}
+
+// Node returns origin AST node.
+func (l *ListType) Node() ast.Node {
+	return l.ArrayType
 }
 
 // Len returns list's length if it is array type,
@@ -201,6 +225,9 @@ type MapType struct {
 	*ast.MapType
 }
 
+var _ Block = (*MapType)(nil)
+var _ TypeBlock = (*MapType)(nil)
+
 func (f *File) newMapType(namePtr *string, doc *ast.CommentGroup, assign token.Pos,
 	typ *ast.MapType) *MapType {
 	return &MapType{
@@ -209,11 +236,19 @@ func (f *File) newMapType(namePtr *string, doc *ast.CommentGroup, assign token.P
 	}
 }
 
+// Node returns origin AST node.
+func (m *MapType) Node() ast.Node {
+	return m.MapType
+}
+
 // ChanType represents a channel type.
 type ChanType struct {
 	*superType
 	*ast.ChanType
 }
+
+var _ Block = (*ChanType)(nil)
+var _ TypeBlock = (*ChanType)(nil)
 
 func (f *File) newChanType(namePtr *string, doc *ast.CommentGroup, assign token.Pos,
 	typ *ast.ChanType) *ChanType {
@@ -221,6 +256,11 @@ func (f *File) newChanType(namePtr *string, doc *ast.CommentGroup, assign token.
 		superType: f.newSuperType(namePtr, Chan, doc, assign != token.NoPos),
 		ChanType:  typ,
 	}
+}
+
+// Node returns origin AST node.
+func (c *ChanType) Node() ast.Node {
+	return c.ChanType
 }
 
 // Dir returns a channel type's direction.
@@ -234,12 +274,20 @@ type InterfaceType struct {
 	*ast.InterfaceType
 }
 
+var _ Block = (*InterfaceType)(nil)
+var _ TypeBlock = (*InterfaceType)(nil)
+
 func (f *File) newInterfaceType(namePtr *string, doc *ast.CommentGroup, assign token.Pos,
 	typ *ast.InterfaceType) *InterfaceType {
 	return &InterfaceType{
 		superType:     f.newSuperType(namePtr, Interface, doc, assign != token.NoPos),
 		InterfaceType: typ,
 	}
+}
+
+// Node returns origin AST node.
+func (i *InterfaceType) Node() ast.Node {
+	return i.InterfaceType
 }
 
 // StructType represents a struct type.
@@ -249,12 +297,20 @@ type StructType struct {
 	fields []*StructField // sorted by offset
 }
 
+var _ Block = (*StructType)(nil)
+var _ TypeBlock = (*StructType)(nil)
+
 func (f *File) newStructType(namePtr *string, doc *ast.CommentGroup, assign token.Pos,
 	typ *ast.StructType) *StructType {
 	return &StructType{
 		superType:  f.newSuperType(namePtr, Struct, doc, assign != token.NoPos),
 		StructType: typ,
 	}
+}
+
+// Node returns origin AST node.
+func (s *StructType) Node() ast.Node {
+	return s.StructType
 }
 
 // A StructField describes a single field in a struct.
@@ -307,7 +363,6 @@ func (s *StructField) Anonymous() bool {
 }
 
 // NumField returns a struct type's field count.
-// It panics if the type's Kind is not Struct.
 func (s *StructType) NumField() int {
 	return len(s.fields)
 }

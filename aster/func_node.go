@@ -18,8 +18,8 @@ import (
 	"go/ast"
 )
 
-// FuncType function type
-type FuncType struct {
+// FuncDecl function Declaration
+type FuncDecl struct {
 	*super
 	*ast.FuncLit
 	recv    *FuncField
@@ -27,9 +27,12 @@ type FuncType struct {
 	results []*FuncField
 }
 
-func (f *File) newFuncType(namePtr *string, doc *ast.CommentGroup,
-	node *ast.FuncLit, recv *FuncField, params, results []*FuncField) *FuncType {
-	ft := &FuncType{
+var _ Block = (*FuncDecl)(nil)
+var _ FuncBlock = (*FuncDecl)(nil)
+
+func (f *File) newFuncBlock(namePtr *string, doc *ast.CommentGroup,
+	node *ast.FuncLit, recv *FuncField, params, results []*FuncField) *FuncDecl {
+	ft := &FuncDecl{
 		super:   f.newSuper(namePtr, Func, doc),
 		FuncLit: node,
 		recv:    recv,
@@ -39,20 +42,25 @@ func (f *File) newFuncType(namePtr *string, doc *ast.CommentGroup,
 	return ft
 }
 
-func (f *FuncType) funcNode() {}
+func (f *FuncDecl) funcBlockIdentify() {}
+
+// Node returns origin AST node.
+func (f *FuncDecl) Node() ast.Node {
+	return f.FuncLit
+}
 
 // NumParam returns a function type's input parameter count.
-func (f *FuncType) NumParam() int {
+func (f *FuncDecl) NumParam() int {
 	return len(f.params)
 }
 
 // NumResult returns a function type's output parameter count.
-func (f *FuncType) NumResult() int {
+func (f *FuncDecl) NumResult() int {
 	return len(f.results)
 }
 
 // Param returns the type of a function type's i'th input parameter.
-func (f *FuncType) Param(i int) (ff *FuncField, found bool) {
+func (f *FuncDecl) Param(i int) (ff *FuncField, found bool) {
 	if i < 0 || i >= len(f.params) {
 		return
 	}
@@ -60,7 +68,7 @@ func (f *FuncType) Param(i int) (ff *FuncField, found bool) {
 }
 
 // Result returns the type of a function type's i'th output parameter.
-func (f *FuncType) Result(i int) (ff *FuncField, found bool) {
+func (f *FuncDecl) Result(i int) (ff *FuncField, found bool) {
 	if i < 0 || i >= len(f.results) {
 		return
 	}
@@ -78,11 +86,11 @@ func (f *FuncType) Result(i int) (ff *FuncField, found bool) {
 //	f.Param(1) is the Type for "[]float64"
 //	f.IsVariadic() == true
 //
-func (f *FuncType) IsVariadic() bool {
+func (f *FuncDecl) IsVariadic() bool {
 	return isVariadic(f.FuncLit.Type)
 }
 
 // Recv returns receiver (methods); or returns false (functions)
-func (f *FuncType) Recv() (*FuncField, bool) {
+func (f *FuncDecl) Recv() (*FuncField, bool) {
 	return f.recv, f.recv != nil
 }

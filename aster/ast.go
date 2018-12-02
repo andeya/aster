@@ -73,8 +73,7 @@ type File struct {
 	Src      []byte
 	mode     parser.Mode
 	Imports  []*Import
-	Types    map[token.Pos]TypeNode // <type pos, TypeNode>
-	Funcs    map[token.Pos]FuncNode // <func or method pos, FuncNode>
+	Blocks   map[token.Pos]Block // <type node pos, Block>
 }
 
 // Import import info
@@ -85,93 +84,129 @@ type Import struct {
 	Doc  *ast.CommentGroup
 }
 
-// ExtNode the basic sub-interface based on ast.Node extension,
-// is the supertype of other extended interfaces.
-type ExtNode interface {
-	ast.Node // origin AST node
+type (
+	// Block the basic sub-interface based on ast.Node extension,
+	// is the supertype of other extended interfaces.
+	Block interface {
+		CommBlockMethods
+		FuncBlockMethods
+		TypeBlockMethods
+		blockIdentify() // only as identify method
+	}
+	// FuncBlock is the representation of a Go function or method.
+	// NOTE: Kind = Func
+	FuncBlock interface {
+		CommBlockMethods
+		FuncBlockMethods
+		funcBlockIdentify() // only as identify method
+	}
+	// TypeBlock is the representation of a Go type node.
+	// NOTE: Kind != Func
+	TypeBlock interface {
+		CommBlockMethods
+		TypeBlockMethods
+		typeBlockIdentify() // only as identify method
+	}
+)
 
-	// Name returns the type's name within its package for a defined type.
-	// For other (non-defined) types it returns the empty string.
-	Name() string
+type (
+	// CommBlockMethods is the common methods of block interface.
+	CommBlockMethods interface {
+		// Node returns origin AST node.
+		Node() ast.Node
 
-	// Kind returns the specific kind of this type.
-	Kind() Kind
+		// Name returns the type's name within its package for a defined type.
+		// For other (non-defined) types it returns the empty string.
+		Name() string
 
-	// Doc returns lead comment.
-	Doc() string
-}
+		// Kind returns the specific kind of this type.
+		Kind() Kind
 
-// TypeNode is the representation of a Go type node.
-type TypeNode interface {
-	ExtNode
-	typeNode() // only as identify method
+		// Doc returns lead comment.
+		Doc() string
+	}
 
-	// IsAssign is there `=` for declared type?
-	IsAssign() bool
+	// TypeBlockMethods is the representation of a Go type node.
+	// NOTE: Kind != Func
+	TypeBlockMethods interface {
+		// IsAssign is there `=` for declared type?
+		IsAssign() bool
 
-	// NumMethod returns the number of exported methods in the type's method set.
-	NumMethod() int
+		// NumMethod returns the number of exported methods in the type's method set.
+		NumMethod() int
 
-	// Method returns the i'th method in the type's method set.
-	// For a non-interface type T or *T, the returned Method's Type and Func
-	// fields describe a function whose first argument is the receiver.
-	//
-	// For an interface type, the returned Method's Type field gives the
-	// method signature, without a receiver, and the Func field is nil.
-	Method(int) (FuncNode, bool)
+		// Method returns the i'th method in the type's method set.
+		// For a non-interface type T or *T, the returned Method's Type and Func
+		// fields describe a function whose first argument is the receiver.
+		//
+		// For an interface type, the returned Method's Type field gives the
+		// method signature, without a receiver, and the Func field is nil.
+		Method(int) (FuncBlock, bool)
 
-	// MethodByName returns the method with that name in the type's
-	// method set and a boolean indicating if the method was found.
-	//
-	// For a non-interface type T or *T, the returned Method's Type and Func
-	// fields describe a function whose first argument is the receiver.
-	//
-	// For an interface type, the returned Method's Type field gives the
-	// method signature, without a receiver, and the Func field is nil.
-	MethodByName(string) (FuncNode, bool)
+		// MethodByName returns the method with that name in the type's
+		// method set and a boolean indicating if the method was found.
+		//
+		// For a non-interface type T or *T, the returned Method's Type and Func
+		// fields describe a function whose first argument is the receiver.
+		//
+		// For an interface type, the returned Method's Type field gives the
+		// method signature, without a receiver, and the Func field is nil.
+		MethodByName(string) (FuncBlock, bool)
 
-	// Implements reports whether the type implements the interface type u.
-	Implements(u TypeNode) bool
+		// Implements reports whether the type implements the interface type u.
+		Implements(u TypeBlock) bool
 
-	// addMethod adds a FuncNode as method.
-	//
-	// Returns error if the FuncNode is already exist or receiver is not the TypeNode.
-	addMethod(FuncNode) error
-}
+		// addMethod adds a FuncBlock as method.
+		//
+		// Returns error if the FuncBlock is already exist or receiver is not the TypeBlock.
+		addMethod(FuncBlock) error
 
-// FuncNode is the representation of a Go function or method.
-type FuncNode interface {
-	ExtNode
-	funcNode() // only as identify method
+		// -------------- Only for kind=Struct ---------------
 
-	// NumParam returns a function type's input parameter count.
-	NumParam() int
+		// NumField returns a struct type's field count.
+		// It panics if the type's Kind is not Struct.
+		NumField() int
 
-	// NumResult returns a function type's output parameter count.
-	NumResult() int
+		// Field returns a struct type's i'th field.
+		Field(i int) (field *StructField, found bool)
 
-	// Param returns the type of a function type's i'th input parameter.
-	Param(int) (*FuncField, bool)
+		// FieldByName returns the struct field with the given name
+		// and a boolean indicating if the field was found.
+		FieldByName(name string) (field *StructField, found bool)
+	}
 
-	// Result returns the type of a function type's i'th output parameter.
-	Result(int) (*FuncField, bool)
+	// FuncBlockMethods is the representation of a Go function or method.
+	// NOTE: Kind = Func
+	FuncBlockMethods interface {
+		// NumParam returns a function type's input parameter count.
+		NumParam() int
 
-	// IsVariadic reports whether a function type's final input parameter
-	// is a "..." parameter. If so, t.In(t.NumIn() - 1) returns the parameter's
-	// implicit actual type []T.
-	//
-	// For concreteness, if t represents func(x int, y ... float64), then
-	//
-	//	f.NumParam() == 2
-	//	f.Param(0) is the Type for "int"
-	//	f.Param(1) is the Type for "[]float64"
-	//	f.IsVariadic() == true
-	//
-	IsVariadic() bool
+		// NumResult returns a function type's output parameter count.
+		NumResult() int
 
-	// Recv returns receiver (methods); or returns false (functions)
-	Recv() (*FuncField, bool)
-}
+		// Param returns the type of a function type's i'th input parameter.
+		Param(int) (*FuncField, bool)
+
+		// Result returns the type of a function type's i'th output parameter.
+		Result(int) (*FuncField, bool)
+
+		// IsVariadic reports whether a function type's final input parameter
+		// is a "..." parameter. If so, t.In(t.NumIn() - 1) returns the parameter's
+		// implicit actual type []T.
+		//
+		// For concreteness, if t represents func(x int, y ... float64), then
+		//
+		//	f.NumParam() == 2
+		//	f.Param(0) is the Type for "int"
+		//	f.Param(1) is the Type for "[]float64"
+		//	f.IsVariadic() == true
+		//
+		IsVariadic() bool
+
+		// Recv returns receiver (methods); or returns false (functions)
+		Recv() (*FuncField, bool)
+	}
+)
 
 // FuncField function params or results.
 type FuncField struct {
@@ -283,6 +318,8 @@ func (f *File) newSuper(namePtr *string, kind Kind, doc *ast.CommentGroup) *supe
 	}
 }
 
+func (s *super) blockIdentify() {}
+
 // Kind returns the facade kind of this node.
 func (s *super) Kind() Kind {
 	return s.kind
@@ -303,4 +340,167 @@ func (s *super) Doc() string {
 		return ""
 	}
 	return s.doc.Text()
+}
+
+// ------------------------ Kind: Func ------------------------
+
+// NumParam returns a function type's input parameter count.
+func (s *super) NumParam() int {
+	if s.kind != Func {
+		panic("Kind must be aster.Func!")
+	}
+	panic("TODO: Coming soon!")
+}
+
+// NumResult returns a function type's output parameter count.
+func (s *super) NumResult() int {
+	if s.kind != Func {
+		panic("Kind must be aster.Func!")
+	}
+	panic("TODO: Coming soon!")
+}
+
+// Param returns the type of a function type's i'th input parameter.
+func (s *super) Param(int) (*FuncField, bool) {
+	if s.kind != Func {
+		panic("Kind must be aster.Func!")
+	}
+	panic("TODO: Coming soon!")
+}
+
+// Result returns the type of a function type's i'th output parameter.
+func (s *super) Result(int) (*FuncField, bool) {
+	if s.kind != Func {
+		panic("Kind must be aster.Func!")
+	}
+	panic("TODO: Coming soon!")
+}
+
+// IsVariadic reports whether a function type's final input parameter
+// is a "..." parameter. If so, t.In(t.NumIn() - 1) returns the parameter's
+// implicit actual type []T.
+//
+// For concreteness, if t represents func(x int, y ... float64), then
+//
+//	f.NumParam() == 2
+//	f.Param(0) is the Type for "int"
+//	f.Param(1) is the Type for "[]float64"
+//	f.IsVariadic() == true
+//
+func (s *super) IsVariadic() bool {
+	if s.kind != Func {
+		panic("Kind must be aster.Func!")
+	}
+	panic("TODO: Coming soon!")
+}
+
+// Recv returns receiver (methods); or returns false (functions)
+func (s *super) Recv() (*FuncField, bool) {
+	if s.kind != Func {
+		panic("Kind must be aster.Func!")
+	}
+	panic("TODO: Coming soon!")
+}
+
+// IsFuncBlock returns true if b is implementd FuncBlock.
+func IsFuncBlock(b Block) bool {
+	_, ok := b.(FuncBlock)
+	return ok
+}
+
+// IsTypeBlock returns true if b is implementd TypeBlock.
+func IsTypeBlock(b Block) bool {
+	_, ok := b.(TypeBlock)
+	return ok
+}
+
+// ------------------------ Type ------------------------
+
+// IsAssign is there `=` for declared type?
+func (s *super) IsAssign() bool {
+	if s.kind == Func {
+		panic("Kind cant not be aster.Func!")
+	}
+	panic("TODO: Coming soon!")
+}
+
+// NumMethod returns the number of exported methods in the type's method set.
+func (s *super) NumMethod() int {
+	if s.kind == Func {
+		panic("Kind cant not be aster.Func!")
+	}
+	panic("TODO: Coming soon!")
+}
+
+// Method returns the i'th method in the type's method set.
+// For a non-interface type T or *T, the returned Method's Type and Func
+// fields describe a function whose first argument is the receiver.
+//
+// For an interface type, the returned Method's Type field gives the
+// method signature, without a receiver, and the Func field is nil.
+func (s *super) Method(int) (FuncBlock, bool) {
+	if s.kind == Func {
+		panic("Kind cant not be aster.Func!")
+	}
+	panic("TODO: Coming soon!")
+}
+
+// MethodByName returns the method with that name in the type's
+// method set and a boolean indicating if the method was found.
+//
+// For a non-interface type T or *T, the returned Method's Type and Func
+// fields describe a function whose first argument is the receiver.
+//
+// For an interface type, the returned Method's Type field gives the
+// method signature, without a receiver, and the Func field is nil.
+func (s *super) MethodByName(string) (FuncBlock, bool) {
+	if s.kind == Func {
+		panic("Kind cant not be aster.Func!")
+	}
+	panic("TODO: Coming soon!")
+}
+
+// Implements reports whether the type implements the interface type u.
+func (s *super) Implements(u TypeBlock) bool {
+	if s.kind == Func {
+		panic("Kind cant not be aster.Func!")
+	}
+	panic("TODO: Coming soon!")
+}
+
+// addMethod adds a FuncBlock as method.
+//
+// Returns error if the FuncBlock is already exist or receiver is not the TypeBlock.
+func (s *super) addMethod(FuncBlock) error {
+	if s.kind == Func {
+		panic("Kind cant not be aster.Func!")
+	}
+	panic("TODO: Coming soon!")
+}
+
+// -------------- Only for kind=Struct ---------------
+
+// NumField returns a struct type's field count.
+func (s *super) NumField() int {
+	if s.kind != Struct {
+		panic("Kind must be aster.Struct!")
+	}
+	panic("TODO: Coming soon!")
+}
+
+// Field returns a struct type's i'th field.
+func (s *super) Field(i int) (field *StructField, found bool) {
+	if s.kind != Struct {
+		panic("Kind must be aster.Struct!")
+	}
+	panic("TODO: Coming soon!")
+}
+
+// FieldByName returns the struct field with the given name
+// and a boolean indicating if the field was found.
+func (s *super) FieldByName(name string) (field *StructField, found bool) {
+	if s.kind != Struct {
+		panic("Kind must be aster.Struct!")
+	}
+	panic("TODO: Coming soon!")
 }

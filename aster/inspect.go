@@ -22,6 +22,32 @@ import (
 	"strings"
 )
 
+// Module returns module object if exist.
+func (p *Package) Module() (*Module, bool) {
+	return p.module, p.module != nil
+}
+
+// LookupTypeBlock lookups TypeBlock by type name in current package.
+func (p *Package) LookupTypeBlock(name string) (t TypeBlock, found bool) {
+	fn, ok := createTypeBlockByNameInPkg(name)
+	if !ok {
+		return
+	}
+	var blocks []Block
+	for _, v := range p.Files {
+		blocks = v.SearchBlock(fn)
+		if len(blocks) > 0 {
+			return blocks[0].(TypeBlock), true
+		}
+	}
+	return
+}
+
+// Package returns package object if exist.
+func (f *File) Package() (*Package, bool) {
+	return f.pkg, f.pkg != nil
+}
+
 // LookupImports lookups the import info by package name.
 func (f *File) LookupImports(currPkgName string) (imports []*Import, found bool) {
 	for _, imp := range f.Imports {
@@ -53,19 +79,23 @@ func (f *File) LookupPackages(currPkgName string) (pkgs []*Package, found bool) 
 	return
 }
 
-// LookupTypeInFile lookup Type by type name in current file.
-func (f *File) LookupTypeInFile(name string) (t TypeNode, found bool) {
-	for _, n := range f.Types {
-		if name == n.Name() {
-			return n, true
-		}
+// LookupTypeBlockInPkg lookups TypeBlock by type name in current package.
+func (f *File) LookupTypeBlockInPkg(name string) (t TypeBlock, found bool) {
+	p, ok := f.Package()
+	if ok {
+		return p.LookupTypeBlock(name)
 	}
-	return nil, false
+	return f.LookupTypeBlock(name)
 }
 
-// LookupTypeInModule lookup Type by type name in current module.
-func (f *File) LookupTypeInModule(name string) (t TypeNode, found bool) {
-	t, found = f.LookupTypeInPackage(name)
+// LookupTypeBlockInMod lookup Type by type name in current module.
+func (f *File) LookupTypeBlockInMod(name string) (t TypeBlock, found bool) {
+	p, ok := f.Package()
+	if ok {
+		t, found = p.LookupTypeBlock(name)
+	} else {
+		t, found = f.LookupTypeBlock(name)
+	}
 	if found {
 		return
 	}
@@ -80,36 +110,45 @@ func (f *File) LookupTypeInModule(name string) (t TypeNode, found bool) {
 		return
 	}
 	for _, p := range pkgs {
-		for _, v := range p.Files {
-			t, found = v.LookupTypeInFile(a[1])
-			if found {
-				return
-			}
+		t, found = p.LookupTypeBlock(a[1])
+		if found {
+			return
 		}
 	}
 	return
 }
 
-// LookupTypeInPackage lookup Type by type name in current package.
-func (f *File) LookupTypeInPackage(name string) (t TypeNode, found bool) {
-	if strings.Contains(name, ".") {
+// LookupTypeBlock lookups TypeBlock by type name in current file.
+func (f *File) LookupTypeBlock(name string) (t TypeBlock, found bool) {
+	fn, ok := createTypeBlockByNameInPkg(name)
+	if !ok {
 		return
 	}
-	name = strings.TrimLeft(name, "*")
-	if f.pkg == nil {
-		t, found = f.LookupTypeInFile(name)
-		if found {
-			return
-		}
-	} else {
-		for _, v := range f.pkg.Files {
-			t, found = v.LookupTypeInFile(name)
-			if found {
-				return
-			}
-		}
+	blocks := f.SearchBlock(fn)
+	if len(blocks) > 0 {
+		return blocks[0].(TypeBlock), true
 	}
 	return
+}
+
+func createTypeBlockByNameInPkg(name string) (func(Block) bool, bool) {
+	if strings.Contains(name, ".") {
+		return nil, false
+	}
+	name = strings.TrimLeft(name, "*")
+	return func(b Block) bool {
+		return IsTypeBlock(b) && b.Name() == name
+	}, true
+}
+
+// SearchBlock lookup Type by type name in current file.
+func (f *File) SearchBlock(fn func(Block) bool) (blocks []Block) {
+	for _, n := range f.Blocks {
+		if fn(n) {
+			blocks = append(blocks, n)
+		}
+	}
+	return blocks
 }
 
 func (p *Package) collectNodes() {
@@ -125,10 +164,10 @@ func (p *Package) collectNodes() {
 // Use the method if no other file in the same package,
 // otherwise use *Package.collectNodes()
 func (f *File) collectNodes(singleParsing bool) {
-	f.Funcs = make(map[token.Pos]FuncNode)
+	f.Blocks = make(map[token.Pos]Block)
+
 	f.collectFuncs()
 
-	f.Types = make(map[token.Pos]TypeNode)
 	f.collectTypesOtherThanStruct()
 	f.collectStructs()
 	f.setStructFields()
@@ -140,19 +179,19 @@ func (f *File) collectNodes(singleParsing bool) {
 
 func (f *File) collectFuncs() {
 	collectFuncs := func(n ast.Node) bool {
-		var t *FuncType
+		var t *FuncDecl
 		var funcType *ast.FuncType
 		switch x := n.(type) {
 		case *ast.FuncLit:
 			funcType = x.Type
-			t = f.newFuncType(nil, nil, x, nil, nil, nil)
+			t = f.newFuncBlock(nil, nil, x, nil, nil, nil)
 		case *ast.FuncDecl:
 			funcType = x.Type
 			var recv *FuncField
 			if recvs := f.expandFuncFields(x.Recv); len(recvs) > 0 {
 				recv = recvs[0]
 			}
-			t = f.newFuncType(
+			t = f.newFuncBlock(
 				&x.Name.Name,
 				x.Doc,
 				&ast.FuncLit{
@@ -166,7 +205,7 @@ func (f *File) collectFuncs() {
 		default:
 			return true
 		}
-		f.Funcs[t.Pos()] = t
+		f.Blocks[t.Pos()] = t
 		return true
 	}
 	ast.Inspect(f.File, collectFuncs)
@@ -192,7 +231,7 @@ func (f *File) collectTypeSpecs(fn func(*ast.TypeSpec, *ast.CommentGroup)) {
 func (f *File) collectTypesOtherThanStruct() {
 	f.collectTypeSpecs(func(node *ast.TypeSpec, doc *ast.CommentGroup) {
 		namePtr := &node.Name.Name
-		var t TypeNode
+		var t Block
 		switch x := getElem(node.Type).(type) {
 		case *ast.SelectorExpr:
 			t = f.newAliasType(namePtr, doc, node.Assign, x)
@@ -215,7 +254,7 @@ func (f *File) collectTypesOtherThanStruct() {
 		default:
 			return
 		}
-		f.Types[t.Pos()] = t
+		f.Blocks[t.Node().Pos()] = t
 	})
 }
 
@@ -229,7 +268,7 @@ func (f *File) collectStructs() {
 				return true
 			}
 			st := f.newStructType(nil, nil, -1, t)
-			f.Types[st.Pos()] = st
+			f.Blocks[st.Node().Pos()] = st
 		case *ast.GenDecl:
 			for _, spec := range x.Specs {
 				var assign = token.NoPos
@@ -260,7 +299,7 @@ func (f *File) collectStructs() {
 					continue
 				}
 				st := f.newStructType(structName, doc, assign, z)
-				f.Types[st.Pos()] = st
+				f.Blocks[st.Node().Pos()] = st
 			}
 		}
 		return true
@@ -269,7 +308,7 @@ func (f *File) collectStructs() {
 }
 
 func (f *File) setStructFields() {
-	for _, t := range f.Types {
+	for _, t := range f.Blocks {
 		s, ok := t.(*StructType)
 		if !ok {
 			continue
@@ -279,16 +318,21 @@ func (f *File) setStructFields() {
 }
 
 func (f *File) bindMethods() {
-	for _, m := range f.Funcs {
-		recv, found := m.Recv()
+	for _, m := range f.Blocks {
+		fb, ok := m.(FuncBlock)
+		if !ok {
+			continue
+		}
+		recv, found := fb.Recv()
 		if !found {
 			continue
 		}
-		t, found := f.LookupTypeInPackage(recv.TypeName)
+		t, found := f.LookupTypeBlockInPkg(recv.TypeName)
 		if !found {
 			continue
 		}
-		t.addMethod(m)
+		t.addMethod(fb)
+		break
 	}
 }
 

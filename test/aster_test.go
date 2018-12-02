@@ -26,19 +26,19 @@ type S struct {
 	if err != nil {
 		t.Fatal(err)
 	}
-	s, ok := f.LookupTypeInFile("S")
+	s, ok := f.LookupTypeBlock("S")
 	if !ok {
 		t.FailNow()
 	}
 
 	// test tag
-	aField, ok := s.(*aster.StructType).FieldByName("A")
+	aField, ok := s.FieldByName("A")
 	if !ok {
 		t.FailNow()
 	}
 	aField.Tags.AddOptions("json", "omitempty")
 
-	bField, ok := s.(*aster.StructType).FieldByName("B")
+	bField, ok := s.FieldByName("B")
 	if !ok {
 		t.FailNow()
 	}
@@ -48,7 +48,7 @@ type S struct {
 		Options: []string{"omitempty"},
 	})
 
-	dField, ok := s.(*aster.StructType).FieldByName("D")
+	dField, ok := s.FieldByName("D")
 	if !ok {
 		t.FailNow()
 	}
@@ -58,7 +58,7 @@ type S struct {
 		Options: []string{"omitempty"},
 	})
 
-	eField, ok := s.(*aster.StructType).FieldByName("E")
+	eField, ok := s.FieldByName("E")
 	if !ok {
 		t.FailNow()
 	}
@@ -68,7 +68,7 @@ type S struct {
 	})
 
 	var dst bytes.Buffer
-	err = format.Node(&dst, f.FileSet, s.(*aster.StructType).StructType)
+	err = format.Node(&dst, f.FileSet, s.Node())
 	if err != nil {
 		t.Fatal(err)
 	}
