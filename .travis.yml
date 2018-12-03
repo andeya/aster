@@ -4,7 +4,7 @@ os:
   - osx
   - windows
 go:
-  - "1.10"
+  # - "1.10"
   - "1.11"
 go_import_path: github.com/henrylee2cn/aster
 env:
@@ -15,4 +15,3 @@ script:
   - go test -v ./_examples
   - go test -v ./_test
   - go test -v ./...
-  
