@@ -1,4 +1,4 @@
-# Aster [![GitHub release](https://img.shields.io/github/release/henrylee2cn/aster.svg?style=flat-square)](https://github.com/henrylee2cn/aster/releases) [![report card](https://goreportcard.com/badge/github.com/henrylee2cn/aster?style=flat-square)](http://goreportcard.com/report/henrylee2cn/aster) [![GoDoc](https://img.shields.io/badge/godoc-reference-blue.svg?style=flat-square)](http://godoc.org/github.com/henrylee2cn/aster) [![Build Status](https://travis-ci.org/henrylee2cn/aster.svg?branch=master)](https://travis-ci.org/henrylee2cn/aster)
+# Aster [![GitHub release](https://img.shields.io/github/release/henrylee2cn/aster.svg?style=flat-square)](https://github.com/henrylee2cn/aster/releases) [![GoDoc](https://img.shields.io/badge/godoc-reference-blue.svg?style=flat-square)](http://godoc.org/github.com/henrylee2cn/aster) [![Report Card](https://goreportcard.com/badge/github.com/henrylee2cn/aster?style=flat-square)](http://goreportcard.com/report/henrylee2cn/aster) [![Build Status](https://travis-ci.org/henrylee2cn/aster.svg?branch=master)](https://travis-ci.org/henrylee2cn/aster)
 
 Golang coding efficiency engine.
 

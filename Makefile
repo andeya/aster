@@ -35,10 +35,3 @@ wipe: clean
 
 get-deps:
 	go get -d -t ./...
-
-# travis CI enters here
-travis:
-	go get -d -t ./...
-	go test -v ./_examples
-	go test -v ./_test
-	go test -v ./...
