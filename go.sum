@@ -1,0 +1,4 @@
+github.com/henrylee2cn/goutil v0.0.0-20181115104016-4a4ae4109d2c h1:h8N9AEIK4WxSZ6MOZSe6vnbtdyJZv4PYBWU0tdnTL8E=
+github.com/henrylee2cn/goutil v0.0.0-20181115104016-4a4ae4109d2c/go.mod h1:I9qYeMYwdKC7UFXMECNzCEv0fYuolqLeBMqsmeG7IVo=
+github.com/henrylee2cn/structtag v1.0.0 h1:g8D1LKoXxxiftdp7UhBeGrdG7oJYpMnGGG8tTE8+hKw=
+github.com/henrylee2cn/structtag v1.0.0/go.mod h1:qmrObf6fG2vu3RphREGq4q5o7ADGPWeu6tZRn7uP7CQ=
