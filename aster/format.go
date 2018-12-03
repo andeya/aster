@@ -146,7 +146,7 @@ func writeFile(filename, text string) error {
 		return err
 	}
 	dir, _ := filepath.Split(filename)
-	err = os.MkdirAll(dir, 0666)
+	err = os.MkdirAll(dir, 0777)
 	if err != nil {
 		return err
 	}
