@@ -75,7 +75,7 @@ func main() {
 }
 ```
 
-  - output
+  - The output of the above program is:
 
 	```go
 	package test
