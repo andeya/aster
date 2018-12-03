@@ -168,10 +168,13 @@ type (
 		NumField() int
 
 		// Field returns a struct type's i'th field.
-		Field(i int) (field *StructField, found bool)
+		// It panics if the type's Kind is not Struct.
+		// It panics if i is not in the range [0, NumField()).
+		Field(int) *StructField
 
 		// FieldByName returns the struct field with the given name
 		// and a boolean indicating if the field was found.
+		// It panics if the type's Kind is not Struct.
 		FieldByName(name string) (field *StructField, found bool)
 	}
 
@@ -347,33 +350,33 @@ func (s *super) Doc() string {
 // NumParam returns a function type's input parameter count.
 func (s *super) NumParam() int {
 	if s.kind != Func {
-		panic("Kind must be aster.Func!")
+		panic("aster: Kind must be aster.Func!")
 	}
-	panic("TODO: Coming soon!")
+	panic("aster: (TODO) Coming soon!")
 }
 
 // NumResult returns a function type's output parameter count.
 func (s *super) NumResult() int {
 	if s.kind != Func {
-		panic("Kind must be aster.Func!")
+		panic("aster: Kind must be aster.Func!")
 	}
-	panic("TODO: Coming soon!")
+	panic("aster: (TODO) Coming soon!")
 }
 
 // Param returns the type of a function type's i'th input parameter.
 func (s *super) Param(int) (*FuncField, bool) {
 	if s.kind != Func {
-		panic("Kind must be aster.Func!")
+		panic("aster: Kind must be aster.Func!")
 	}
-	panic("TODO: Coming soon!")
+	panic("aster: (TODO) Coming soon!")
 }
 
 // Result returns the type of a function type's i'th output parameter.
 func (s *super) Result(int) (*FuncField, bool) {
 	if s.kind != Func {
-		panic("Kind must be aster.Func!")
+		panic("aster: Kind must be aster.Func!")
 	}
-	panic("TODO: Coming soon!")
+	panic("aster: (TODO) Coming soon!")
 }
 
 // IsVariadic reports whether a function type's final input parameter
@@ -389,17 +392,17 @@ func (s *super) Result(int) (*FuncField, bool) {
 //
 func (s *super) IsVariadic() bool {
 	if s.kind != Func {
-		panic("Kind must be aster.Func!")
+		panic("aster: Kind must be aster.Func!")
 	}
-	panic("TODO: Coming soon!")
+	panic("aster: (TODO) Coming soon!")
 }
 
 // Recv returns receiver (methods); or returns false (functions)
 func (s *super) Recv() (*FuncField, bool) {
 	if s.kind != Func {
-		panic("Kind must be aster.Func!")
+		panic("aster: Kind must be aster.Func!")
 	}
-	panic("TODO: Coming soon!")
+	panic("aster: (TODO) Coming soon!")
 }
 
 // IsFuncNode returns true if b is implementd FuncNode.
@@ -419,17 +422,17 @@ func IsTypeNode(b Node) bool {
 // IsAssign is there `=` for declared type?
 func (s *super) IsAssign() bool {
 	if s.kind == Func {
-		panic("Kind cant not be aster.Func!")
+		panic("aster: Kind cant not be aster.Func!")
 	}
-	panic("TODO: Coming soon!")
+	panic("aster: (TODO) Coming soon!")
 }
 
 // NumMethod returns the number of exported methods in the type's method set.
 func (s *super) NumMethod() int {
 	if s.kind == Func {
-		panic("Kind cant not be aster.Func!")
+		panic("aster: Kind cant not be aster.Func!")
 	}
-	panic("TODO: Coming soon!")
+	panic("aster: (TODO) Coming soon!")
 }
 
 // Method returns the i'th method in the type's method set.
@@ -440,9 +443,9 @@ func (s *super) NumMethod() int {
 // method signature, without a receiver, and the Func field is nil.
 func (s *super) Method(int) (FuncNode, bool) {
 	if s.kind == Func {
-		panic("Kind cant not be aster.Func!")
+		panic("aster: Kind cant not be aster.Func!")
 	}
-	panic("TODO: Coming soon!")
+	panic("aster: (TODO) Coming soon!")
 }
 
 // MethodByName returns the method with that name in the type's
@@ -455,17 +458,17 @@ func (s *super) Method(int) (FuncNode, bool) {
 // method signature, without a receiver, and the Func field is nil.
 func (s *super) MethodByName(string) (FuncNode, bool) {
 	if s.kind == Func {
-		panic("Kind cant not be aster.Func!")
+		panic("aster: Kind cant not be aster.Func!")
 	}
-	panic("TODO: Coming soon!")
+	panic("aster: (TODO) Coming soon!")
 }
 
 // Implements reports whether the type implements the interface type u.
 func (s *super) Implements(u TypeNode) bool {
 	if s.kind == Func {
-		panic("Kind cant not be aster.Func!")
+		panic("aster: Kind cant not be aster.Func!")
 	}
-	panic("TODO: Coming soon!")
+	panic("aster: (TODO) Coming soon!")
 }
 
 // addMethod adds a FuncNode as method.
@@ -473,9 +476,9 @@ func (s *super) Implements(u TypeNode) bool {
 // Returns error if the FuncNode is already exist or receiver is not the TypeNode.
 func (s *super) addMethod(FuncNode) error {
 	if s.kind == Func {
-		panic("Kind cant not be aster.Func!")
+		panic("aster: Kind cant not be aster.Func!")
 	}
-	panic("TODO: Coming soon!")
+	panic("aster: (TODO) Coming soon!")
 }
 
 // -------------- Only for Kind=Struct ---------------
@@ -483,24 +486,24 @@ func (s *super) addMethod(FuncNode) error {
 // NumField returns a struct type's field count.
 func (s *super) NumField() int {
 	if s.kind != Struct {
-		panic("Kind must be aster.Struct!")
+		panic("aster: Kind must be aster.Struct!")
 	}
-	panic("TODO: Coming soon!")
+	panic("aster: (TODO) Coming soon!")
 }
 
 // Field returns a struct type's i'th field.
-func (s *super) Field(i int) (field *StructField, found bool) {
+func (s *super) Field(int) *StructField {
 	if s.kind != Struct {
-		panic("Kind must be aster.Struct!")
+		panic("aster: Kind must be aster.Struct!")
 	}
-	panic("TODO: Coming soon!")
+	panic("aster: (TODO) Coming soon!")
 }
 
 // FieldByName returns the struct field with the given name
 // and a boolean indicating if the field was found.
 func (s *super) FieldByName(name string) (field *StructField, found bool) {
 	if s.kind != Struct {
-		panic("Kind must be aster.Struct!")
+		panic("aster: Kind must be aster.Struct!")
 	}
-	panic("TODO: Coming soon!")
+	panic("aster: (TODO) Coming soon!")
 }

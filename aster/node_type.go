@@ -313,6 +313,32 @@ func (s *StructType) Node() ast.Node {
 	return s.StructType
 }
 
+// NumField returns a struct type's field count.
+func (s *StructType) NumField() int {
+	return len(s.fields)
+}
+
+// Field returns a struct type's i'th field.
+// It panics if the type's Kind is not Struct.
+// It panics if i is not in the range [0, NumField()).
+func (s *StructType) Field(i int) (field *StructField) {
+	if i < 0 || i >= len(s.fields) {
+		panic("aster: Field index out of bounds")
+	}
+	return s.fields[i]
+}
+
+// FieldByName returns the struct field with the given name
+// and a boolean indicating if the field was found.
+func (s *StructType) FieldByName(name string) (field *StructField, found bool) {
+	for _, field := range s.fields {
+		if field.Name() == name {
+			return field, true
+		}
+	}
+	return nil, false
+}
+
 // A StructField describes a single field in a struct.
 type StructField struct {
 	*ast.Field
@@ -360,30 +386,6 @@ func (s *StructField) Comment() string {
 // Anonymous returns whether the field is an anonymous field.
 func (s *StructField) Anonymous() bool {
 	return len(s.Field.Names) == 0
-}
-
-// NumField returns a struct type's field count.
-func (s *StructType) NumField() int {
-	return len(s.fields)
-}
-
-// Field returns a struct type's i'th field.
-func (s *StructType) Field(i int) (field *StructField, found bool) {
-	if i < 0 || i >= len(s.fields) {
-		return
-	}
-	return s.fields[i], true
-}
-
-// FieldByName returns the struct field with the given name
-// and a boolean indicating if the field was found.
-func (s *StructType) FieldByName(name string) (field *StructField, found bool) {
-	for _, field := range s.fields {
-		if field.Name() == name {
-			return field, true
-		}
-	}
-	return nil, false
 }
 
 // A StructTag is the tag string in a struct field.

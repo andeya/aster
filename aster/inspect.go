@@ -38,7 +38,7 @@ func (p *Package) LookupType(name string) (t TypeNode, found bool) {
 	}
 	var nodes []Node
 	for _, v := range p.Files {
-		nodes = v.Inspect(fn)
+		nodes = v.Fetch(fn)
 		if len(nodes) > 0 {
 			return nodes[0].(TypeNode), true
 		}
@@ -46,14 +46,25 @@ func (p *Package) LookupType(name string) (t TypeNode, found bool) {
 	return
 }
 
-// Inspect traverses nodes in the file.
-func (f *File) Inspect(fn func(Node) bool) (nodes []Node) {
-	for _, n := range f.Nodes {
-		if fn(n) {
+// Fetch fetches node if fn returns true.
+func (f *File) Fetch(fn func(Node) bool) (nodes []Node) {
+	f.Inspect(func(n Node) bool {
+		next := fn(n)
+		if next {
 			nodes = append(nodes, n)
 		}
-	}
+		return next
+	})
 	return nodes
+}
+
+// Inspect traverses nodes in the file.
+func (f *File) Inspect(fn func(Node) bool) {
+	for _, n := range f.Nodes {
+		if !fn(n) {
+			return
+		}
+	}
 }
 
 // LookupImports lookups the import info by package name.
@@ -132,7 +143,7 @@ func (f *File) LookupType(name string) (t TypeNode, found bool) {
 	if !ok {
 		return
 	}
-	nodes := f.Inspect(fn)
+	nodes := f.Fetch(fn)
 	if len(nodes) > 0 {
 		return nodes[0].(TypeNode), true
 	}
