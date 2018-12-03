@@ -59,9 +59,9 @@ func (m *Module) Reparse() (first error) {
 	if first != nil {
 		return
 	}
-	m.Pkgs = make(map[string]*Package, len(pkgs))
+	m.Packages = make(map[string]*Package, len(pkgs))
 	for k, v := range pkgs {
-		m.Pkgs[k] = convertPackage(m, k, v)
+		m.Packages[k] = convertPackage(m, k, v)
 	}
 	return
 }

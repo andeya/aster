@@ -1,7 +1,6 @@
 package test
 
 import (
-	"bytes"
 	"go/format"
 	"testing"
 
@@ -67,14 +66,13 @@ type S struct {
 		Name: "e",
 	})
 
-	var dst bytes.Buffer
-	err = format.Node(&dst, f.FileSet, s.Node())
+	structCode, err := f.FormatNode(s.Node())
 	if err != nil {
 		t.Fatal(err)
 	}
-	t.Log(dst.String())
+	t.Log(structCode)
 
-	ret, err := f.Format(f.File)
+	ret, err := f.Format()
 	if err != nil {
 		t.Fatal(err)
 	}

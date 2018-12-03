@@ -24,11 +24,11 @@ import (
 
 // Module packages AST
 type Module struct {
-	FileSet *token.FileSet
-	Dir     string
-	filter  func(os.FileInfo) bool
-	Pkgs    map[string]*Package // <package name, *Package>
-	mode    parser.Mode
+	FileSet  *token.FileSet
+	Dir      string
+	filter   func(os.FileInfo) bool
+	Packages map[string]*Package // <package name, *Package>
+	mode     parser.Mode
 }
 
 // A Package node represents a set of source files

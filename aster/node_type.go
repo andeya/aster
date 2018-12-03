@@ -158,7 +158,7 @@ var _ TypeNode = (*BasicType)(nil)
 
 func (f *File) newBasicType(namePtr *string, doc *ast.CommentGroup, assign token.Pos,
 	typ ast.Expr) (*BasicType, bool) {
-	basicName := strings.TrimLeft(f.TryFormat(typ), "*")
+	basicName := strings.TrimLeft(f.TryFormatNode(typ), "*")
 	kind, found := getBasicKind(basicName)
 	if !found {
 		return nil, false

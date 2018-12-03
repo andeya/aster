@@ -15,9 +15,7 @@
 package aster
 
 import (
-	"bytes"
 	"go/ast"
-	"go/format"
 	"go/token"
 	"strings"
 )
@@ -25,6 +23,11 @@ import (
 // Module returns module object if exist.
 func (p *Package) Module() (*Module, bool) {
 	return p.module, p.module != nil
+}
+
+// Package returns package object if exist.
+func (f *File) Package() (*Package, bool) {
+	return f.pkg, f.pkg != nil
 }
 
 // LookupType lookups TypeNode by type name in current package.
@@ -41,11 +44,6 @@ func (p *Package) LookupType(name string) (t TypeNode, found bool) {
 		}
 	}
 	return
-}
-
-// Package returns package object if exist.
-func (f *File) Package() (*Package, bool) {
-	return f.pkg, f.pkg != nil
 }
 
 // Inspect traverses nodes in the file.
@@ -81,7 +79,7 @@ func (f *File) LookupPackages(currPkgName string) (pkgs []*Package, found bool) 
 	}
 	mod := f.pkg.module
 	for _, imp := range imps {
-		if p, ok := mod.Pkgs[imp.Name]; ok {
+		if p, ok := mod.Packages[imp.Name]; ok {
 			pkgs = append(pkgs, p)
 			found = true
 		}
@@ -360,7 +358,7 @@ func expandFields(fieldList *ast.FieldList) {
 func (f *File) expandFuncFields(fieldList *ast.FieldList) (fields []*FuncField) {
 	if fieldList != nil {
 		for _, g := range fieldList.List {
-			typeName := f.TryFormat(g.Type)
+			typeName := f.TryFormatNode(g.Type)
 			m := len(g.Names)
 			if m == 0 {
 				fields = append(fields, &FuncField{
@@ -377,26 +375,6 @@ func (f *File) expandFuncFields(fieldList *ast.FieldList) (fields []*FuncField) 
 		}
 	}
 	return
-}
-
-// Format format the node and returns the string.
-func (f *File) Format(node ast.Node) (code string, err error) {
-	var dst bytes.Buffer
-	err = format.Node(&dst, f.FileSet, node)
-	if err != nil {
-		return
-	}
-	return dst.String(), nil
-}
-
-// TryFormat format the node and returns the string,
-// returns the default string if fail.
-func (f *File) TryFormat(node ast.Node, defaultValue ...string) string {
-	code, err := f.Format(node)
-	if err != nil && len(defaultValue) > 0 {
-		return defaultValue[0]
-	}
-	return code
 }
 
 func getElem(e ast.Expr) ast.Expr {
