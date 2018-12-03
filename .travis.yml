@@ -1,0 +1,13 @@
+language: go
+os:
+  - linux
+  - osx
+  - windows
+go:
+  - "1.10"
+  - "1.11"
+go_import_path: github.com/henrylee2cn/aster
+env:
+  - GIMME_ARCH=amd64
+  - GIMME_ARCH=386
+script: "make travis"

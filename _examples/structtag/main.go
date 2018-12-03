@@ -9,7 +9,7 @@ import (
 )
 
 var (
-	filename = flag.String("filename", "../out/eg.structtag.go", "file name")
+	filename = flag.String("filename", "out/eg.structtag.go", "file name")
 	src      = flag.String("src", "package test", "code text")
 )
 

@@ -21,7 +21,7 @@ type S struct {
 	if err != nil {
 		t.Fatal(err)
 	}
-	f, err := aster.ParseFile("../out/struct1.go", src)
+	f, err := aster.ParseFile("../_out/struct1.go", src)
 	if err != nil {
 		t.Fatal(err)
 	}

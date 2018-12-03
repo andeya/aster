@@ -14,7 +14,7 @@ type Args struct {
 }
 
 var examples = map[string]*Args{
-	"structtag": {"../out/eg.structtag.go", `package test
+	"structtag": {"../_out/eg.structtag.go", `package test
 	type S struct {
 		Apple string
 		BananaPeel,car,OrangeWater string
