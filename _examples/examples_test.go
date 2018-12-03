@@ -44,8 +44,7 @@ func TestExamples(t *testing.T) {
 }
 
 func testExample(t *testing.T, name string, args *Args) {
-	p, _ := filepath.Abs(name)
-	// filename, _ := filepath.Abs(args.Filename)
+	p, _ := filepath.Abs("./" + name)
 	cmd := exec.Command("go", []string{
 		"run",
 		p,
