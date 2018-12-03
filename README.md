@@ -74,3 +74,24 @@ func main() {
     _ = f.Store()
 }
 ```
+
+  - output
+
+	```go
+	package test
+
+	type S struct {
+		Apple       string `json:"apple,omitempty"`
+		BananaPeel  string `json:"banana_peel,omitempty"`
+		car         string
+		OrangeWater string `json:"orange_water,omitempty"`
+		E           int    `json:"e,omitempty"`
+	}
+
+	func F() {
+		type M struct {
+			N         int `json:"n,omitempty"`
+			lowerCase string
+		}
+	}
+	```
