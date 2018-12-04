@@ -20,14 +20,49 @@ import (
 	"strings"
 )
 
+// Inspect traverses nodes in the module.
+func (m *Module) Inspect(fn func(Node) bool) {
+	for _, p := range m.Packages {
+		p.Inspect(fn)
+	}
+}
+
+// Fetch traversing through the current module, fetches node if fn returns true.
+func (m *Module) Fetch(fn func(Node) bool) (nodes []Node) {
+	for _, p := range m.Packages {
+		p.Inspect(func(n Node) bool {
+			next := fn(n)
+			if next {
+				nodes = append(nodes, n)
+			}
+			return next
+		})
+	}
+	return nodes
+}
+
 // Module returns module object if exist.
 func (p *Package) Module() (*Module, bool) {
 	return p.module, p.module != nil
 }
 
-// Package returns package object if exist.
-func (f *File) Package() (*Package, bool) {
-	return f.pkg, f.pkg != nil
+// Inspect traverses nodes in the package.
+func (p *Package) Inspect(fn func(Node) bool) {
+	for _, f := range p.Files {
+		f.Inspect(fn)
+	}
+}
+
+// Fetch traversing through the current package, fetches node if fn returns true.
+func (p *Package) Fetch(fn func(Node) bool) (nodes []Node) {
+	p.Inspect(func(n Node) bool {
+		next := fn(n)
+		if next {
+			nodes = append(nodes, n)
+		}
+		return next
+	})
+	return nodes
 }
 
 // LookupType lookups TypeNode by type name in current package.
@@ -46,16 +81,9 @@ func (p *Package) LookupType(name string) (t TypeNode, found bool) {
 	return
 }
 
-// Fetch fetches node if fn returns true.
-func (f *File) Fetch(fn func(Node) bool) (nodes []Node) {
-	f.Inspect(func(n Node) bool {
-		next := fn(n)
-		if next {
-			nodes = append(nodes, n)
-		}
-		return next
-	})
-	return nodes
+// Package returns package object if exist.
+func (f *File) Package() (*Package, bool) {
+	return f.pkg, f.pkg != nil
 }
 
 // Inspect traverses nodes in the file.
@@ -65,6 +93,18 @@ func (f *File) Inspect(fn func(Node) bool) {
 			return
 		}
 	}
+}
+
+// Fetch traversing through the current file, fetches node if fn returns true.
+func (f *File) Fetch(fn func(Node) bool) (nodes []Node) {
+	f.Inspect(func(n Node) bool {
+		next := fn(n)
+		if next {
+			nodes = append(nodes, n)
+		}
+		return next
+	})
+	return nodes
 }
 
 // LookupImports lookups the import info by package name.
