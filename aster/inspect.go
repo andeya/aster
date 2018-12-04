@@ -254,7 +254,7 @@ func (f *File) collectFuncs() {
 		default:
 			return true
 		}
-		f.Nodes[t.Pos()] = t
+		f.Nodes[t.Node().Pos()] = t
 		return true
 	}
 	ast.Inspect(f.File, collectFuncs)

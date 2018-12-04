@@ -15,13 +15,14 @@
 package aster
 
 import (
+	"fmt"
 	"go/ast"
 )
 
 // FuncDecl function Declaration
 type FuncDecl struct {
 	*super
-	*ast.FuncLit
+	node    ast.Node // *ast.FuncLit or *ast.FuncDecl
 	recv    *FuncField
 	params  []*FuncField
 	results []*FuncField
@@ -31,10 +32,16 @@ var _ Node = (*FuncDecl)(nil)
 var _ FuncNode = (*FuncDecl)(nil)
 
 func (f *File) newFuncNode(namePtr *string, doc *ast.CommentGroup,
-	node *ast.FuncLit, recv *FuncField, params, results []*FuncField) *FuncDecl {
+	node ast.Node, recv *FuncField, params, results []*FuncField) *FuncDecl {
+	switch node.(type) {
+	case *ast.FuncLit:
+	case *ast.FuncDecl:
+	default:
+		panic(fmt.Sprintf("want: *ast.FuncLit or *ast.FuncDecl, but got: %T", node))
+	}
 	ft := &FuncDecl{
 		super:   f.newSuper(namePtr, Func, doc),
-		FuncLit: node,
+		node:    node,
 		recv:    recv,
 		params:  params,
 		results: results,
@@ -46,8 +53,16 @@ func (f *FuncDecl) funcNodeIdentify() {}
 
 // Node returns origin AST node.
 func (f *FuncDecl) Node() ast.Node {
-	return f.FuncLit
+	return f.node
 }
+
+// String returns the code block preview.
+// func (f *FuncDecl) String() string {
+// 	recv, ok := f.Recv()
+// 	if ok {
+// 		fmt.Sprintf("func (%s *%s) %s = %s", f.Name(), f.Type)
+// 	}
+// }
 
 // NumParam returns a function type's input parameter count.
 func (f *FuncDecl) NumParam() int {
@@ -87,7 +102,14 @@ func (f *FuncDecl) Result(i int) (ff *FuncField, found bool) {
 //	f.IsVariadic() == true
 //
 func (f *FuncDecl) IsVariadic() bool {
-	return isVariadic(f.FuncLit.Type)
+	switch t := f.node.(type) {
+	case *ast.FuncLit:
+		return isVariadic(t.Type)
+	case *ast.FuncDecl:
+		return isVariadic(t.Type)
+	default:
+		return false
+	}
 }
 
 // Recv returns receiver (methods); or returns false (functions)
