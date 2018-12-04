@@ -243,10 +243,7 @@ func (f *File) collectFuncs() {
 			t = f.newFuncNode(
 				&x.Name.Name,
 				x.Doc,
-				&ast.FuncLit{
-					Type: x.Type,
-					Body: x.Body,
-				},
+				x,
 				recv,
 				f.expandFuncFields(funcType.Params),
 				f.expandFuncFields(funcType.Results),
