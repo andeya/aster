@@ -1,35 +1,33 @@
 # Aster [![GitHub release](https://img.shields.io/github/release/henrylee2cn/aster.svg?style=flat-square)](https://github.com/henrylee2cn/aster/releases) [![GoDoc](https://img.shields.io/badge/godoc-reference-blue.svg?style=flat-square)](http://godoc.org/github.com/henrylee2cn/aster) [![Report Card](https://goreportcard.com/badge/github.com/henrylee2cn/aster?style=flat-square)](http://goreportcard.com/report/henrylee2cn/aster) [![Build Status](https://travis-ci.org/henrylee2cn/aster.svg?branch=master)](https://travis-ci.org/henrylee2cn/aster)
 
-Golang coding efficiency engine.
+Golang 高效编码引擎。
 
-[中文版](./README_ZH.md)
+## 状态
 
-## Status
+正在开发中，不能用于生产...
 
-Under development, not for production...
+## 特性
 
-## Feature
-
-- Convert the AST to `reflect.Type`-like types(Kind-Flags), as it would at runtime
-- Simpler, more natural way of metaprogramming
-- Collect and package common syntax node types
-- Provides easy-to-use traversal syntax node functionality
-- Easily fetch and modify syntax node information
+- 将 AST 封装为类似 `reflect.Type` 的对象（Kind 标记），就像运行时反射一样
+- 更简单、更自然的元编程方式
+- 收集并封装常用类型的语法节点
+- 提供易用的语法节点遍历功能
+- 轻松获取和修改语法节点信息
 - ...
 
-## Test Environment
+## 测试环境
 
-- os:
-  - linux
-  - osx
-  - windows
+- OS:
+	+ Linux
+	+ OSX
+	+ Windows
 
-- go:
-  - 1.11
+- Go:
+	+ 1.11
 
-## An Example
+## 一个例子
 
-- Set struct tag
+- 设置 struct tag
 
 ```golang
 package main
@@ -87,7 +85,7 @@ func main() {
 }
 ```
 
-- The output of the above program is:
+-  上面程序的输出：
 
 ```golang
 package test
