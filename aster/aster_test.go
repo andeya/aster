@@ -81,7 +81,7 @@ type S struct {
 	}
 }
 
-func TestBasic(t *testing.T) {
+func TestAlias(t *testing.T) {
 	var src = []byte(`package test
 	// A comment
 	type A int
