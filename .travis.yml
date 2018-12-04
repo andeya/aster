@@ -15,3 +15,5 @@ script:
   - go test -v ./_examples
   - go test -v ./_test
   - go test -v ./...
+after_success:
+  - bash <(curl -s https://codecov.io/bash)
