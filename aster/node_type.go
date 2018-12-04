@@ -153,7 +153,7 @@ func (a *AliasType) Node() ast.Node {
 
 // String returns the formated code block.
 func (a *AliasType) String() string {
-	return join(a, a.file)
+	return joinType(a, a.file)
 }
 
 // BasicType represents a basic type
@@ -194,7 +194,7 @@ func (b *BasicType) Node() ast.Node {
 
 // String returns the formated code block.
 func (b *BasicType) String() string {
-	return join(b, b.file)
+	return joinType(b, b.file)
 }
 
 // ListType represents an array or slice type.
@@ -225,7 +225,7 @@ func (l *ListType) Node() ast.Node {
 
 // String returns the formated code block.
 func (l *ListType) String() string {
-	return join(l, l.file)
+	return joinType(l, l.file)
 }
 
 // Len returns list's length if it is array type,
@@ -262,7 +262,7 @@ func (m *MapType) Node() ast.Node {
 
 // String returns the formated code block.
 func (m *MapType) String() string {
-	return join(m, m.file)
+	return joinType(m, m.file)
 }
 
 // ChanType represents a channel type.
@@ -289,7 +289,7 @@ func (c *ChanType) Node() ast.Node {
 
 // String returns the formated code block.
 func (c *ChanType) String() string {
-	return join(c, c.file)
+	return joinType(c, c.file)
 }
 
 // Dir returns a channel type's direction.
@@ -321,7 +321,7 @@ func (i *InterfaceType) Node() ast.Node {
 
 // String returns the formated code block.
 func (i *InterfaceType) String() string {
-	return join(i, i.file)
+	return joinType(i, i.file)
 }
 
 // StructType represents a struct type.
@@ -349,7 +349,7 @@ func (s *StructType) Node() ast.Node {
 
 // String returns the formated code block.
 func (s *StructType) String() string {
-	return join(s, s.file)
+	return joinType(s, s.file)
 }
 
 // NumField returns a struct type's field count.
@@ -544,7 +544,7 @@ func (s *StructTag) String() string {
 	return s.tags.String()
 }
 
-func join(n Node, file *File) string {
+func joinType(n Node, file *File) string {
 	s, err := file.FormatNode(n.Node())
 	if err != nil {
 		return fmt.Sprintf("// Formatting error: %s", err.Error())
