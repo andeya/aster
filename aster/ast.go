@@ -119,6 +119,12 @@ type (
 		// For other (non-defined) types it returns the empty string.
 		Name() string
 
+		// Filename returns package name to which the node belongs
+		PkgName() string
+
+		// Filename returns filename to which the node belongs
+		Filename() string
+
 		// Kind returns the specific kind of this type.
 		Kind() Kind
 
@@ -306,18 +312,22 @@ func (NilNode) End() token.Pos { return token.NoPos }
 
 // super common node extension info
 type super struct {
-	file    *File
-	kind    Kind
-	namePtr *string
-	doc     *ast.CommentGroup
+	file        *File
+	kind        Kind
+	namePtr     *string
+	pkgNamePtr  *string
+	filenamePtr *string
+	doc         *ast.CommentGroup
 }
 
 func (f *File) newSuper(namePtr *string, kind Kind, doc *ast.CommentGroup) *super {
 	return &super{
-		file:    f,
-		kind:    kind,
-		namePtr: namePtr,
-		doc:     doc,
+		file:        f,
+		kind:        kind,
+		namePtr:     namePtr,
+		pkgNamePtr:  &f.PkgName,
+		filenamePtr: &f.Filename,
+		doc:         doc,
 	}
 }
 
@@ -335,6 +345,16 @@ func (s *super) Name() string {
 		return ""
 	}
 	return *s.namePtr
+}
+
+// Filename returns package name to which the node belongs
+func (s *super) PkgName() string {
+	return *s.pkgNamePtr
+}
+
+// Filename returns filename to which the node belongs
+func (s *super) Filename() string {
+	return *s.filenamePtr
 }
 
 // Doc returns lead comment.
