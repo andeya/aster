@@ -1,4 +1,4 @@
-package test
+package aster_test
 
 import (
 	"go/format"
