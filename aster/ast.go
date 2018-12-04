@@ -131,8 +131,8 @@ type (
 		// Doc returns lead comment.
 		Doc() string
 
-		// String returns the code block preview.
-		// String() string
+		// String returns the formated code block.
+		String() string
 	}
 
 	// TypeNodeMethods is the representation of a Go type node.
@@ -258,7 +258,7 @@ const (
 	Map
 	Func
 	Struct
-	// Ptr
+	Ptr
 )
 
 func getBasicKind(basicName string) (k Kind, found bool) {

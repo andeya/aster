@@ -56,13 +56,14 @@ func (f *FuncDecl) Node() ast.Node {
 	return f.node
 }
 
-// String returns the code block preview.
-// func (f *FuncDecl) String() string {
-// 	recv, ok := f.Recv()
-// 	if ok {
-// 		fmt.Sprintf("func (%s *%s) %s = %s", f.Name(), f.Type)
-// 	}
-// }
+// String returns the formated code block.
+func (f *FuncDecl) String() string {
+	s, err := f.file.FormatNode(f.Node())
+	if err != nil {
+		return fmt.Sprintf("// Formatting error: %s", err.Error())
+	}
+	return s
+}
 
 // NumParam returns a function type's input parameter count.
 func (f *FuncDecl) NumParam() int {

@@ -136,8 +136,12 @@ var _ TypeNode = (*AliasType)(nil)
 
 func (f *File) newAliasType(namePtr *string, doc *ast.CommentGroup, assign token.Pos,
 	typ ast.Expr) *BasicType {
+	kind := Suspense
+	if _, ok := typ.(*ast.StarExpr); ok {
+		kind = Ptr
+	}
 	return &BasicType{
-		superType: f.newSuperType(namePtr, Suspense, doc, assign != token.NoPos),
+		superType: f.newSuperType(namePtr, kind, doc, assign != token.NoPos),
 		Expr:      typ,
 	}
 }
@@ -145,6 +149,11 @@ func (f *File) newAliasType(namePtr *string, doc *ast.CommentGroup, assign token
 // Node returns origin AST node.
 func (a *AliasType) Node() ast.Node {
 	return a.Expr
+}
+
+// String returns the formated code block.
+func (a *AliasType) String() string {
+	return join(a, a.file)
 }
 
 // BasicType represents a basic type
@@ -183,6 +192,11 @@ func (b *BasicType) Node() ast.Node {
 	return b.Expr
 }
 
+// String returns the formated code block.
+func (b *BasicType) String() string {
+	return join(b, b.file)
+}
+
 // ListType represents an array or slice type.
 type ListType struct {
 	*superType
@@ -207,6 +221,11 @@ func (f *File) newListType(namePtr *string, doc *ast.CommentGroup, assign token.
 // Node returns origin AST node.
 func (l *ListType) Node() ast.Node {
 	return l.ArrayType
+}
+
+// String returns the formated code block.
+func (l *ListType) String() string {
+	return join(l, l.file)
 }
 
 // Len returns list's length if it is array type,
@@ -241,6 +260,11 @@ func (m *MapType) Node() ast.Node {
 	return m.MapType
 }
 
+// String returns the formated code block.
+func (m *MapType) String() string {
+	return join(m, m.file)
+}
+
 // ChanType represents a channel type.
 type ChanType struct {
 	*superType
@@ -261,6 +285,11 @@ func (f *File) newChanType(namePtr *string, doc *ast.CommentGroup, assign token.
 // Node returns origin AST node.
 func (c *ChanType) Node() ast.Node {
 	return c.ChanType
+}
+
+// String returns the formated code block.
+func (c *ChanType) String() string {
+	return join(c, c.file)
 }
 
 // Dir returns a channel type's direction.
@@ -290,6 +319,11 @@ func (i *InterfaceType) Node() ast.Node {
 	return i.InterfaceType
 }
 
+// String returns the formated code block.
+func (i *InterfaceType) String() string {
+	return join(i, i.file)
+}
+
 // StructType represents a struct type.
 type StructType struct {
 	*superType
@@ -311,6 +345,11 @@ func (f *File) newStructType(namePtr *string, doc *ast.CommentGroup, assign toke
 // Node returns origin AST node.
 func (s *StructType) Node() ast.Node {
 	return s.StructType
+}
+
+// String returns the formated code block.
+func (s *StructType) String() string {
+	return join(s, s.file)
 }
 
 // NumField returns a struct type's field count.
@@ -503,4 +542,21 @@ func (s *StructTag) Set(tag *Tag) error {
 // String reassembles the tags into a valid literal tag field representation
 func (s *StructTag) String() string {
 	return s.tags.String()
+}
+
+func join(n Node, file *File) string {
+	s, err := file.FormatNode(n.Node())
+	if err != nil {
+		return fmt.Sprintf("// Formatting error: %s", err.Error())
+	}
+	var assign string
+	if n.IsAssign() {
+		assign = "= "
+	}
+	s = "type " + n.Name() + " " + assign + s
+	doc := n.Doc()
+	if doc != "" {
+		s = "// " + doc + s
+	}
+	return s
 }

@@ -9,6 +9,7 @@ import (
 
 func TestStruct(t *testing.T) {
 	var src = []byte(`package test
+// S comment
 type S struct {
 	// a doc
 	A string` + "`json:\"a\"`" + ` // a comment
@@ -30,6 +31,7 @@ type S struct {
 		t.FailNow()
 	}
 	t.Logf("package:%s, filename:%s, typename:%s", s.PkgName(), s.Filename(), s.Name())
+	t.Log(s)
 
 	// test tag
 	aField, ok := s.FieldByName("A")
@@ -67,12 +69,6 @@ type S struct {
 		Name: "e",
 	})
 
-	structCode, err := f.FormatNode(s.Node())
-	if err != nil {
-		t.Fatal(err)
-	}
-	t.Log(structCode)
-
 	ret, err := f.Format()
 	if err != nil {
 		t.Fatal(err)
@@ -83,4 +79,62 @@ type S struct {
 	if err != nil {
 		t.Fatal(err)
 	}
+}
+
+func TestBasic(t *testing.T) {
+	var src = []byte(`package test
+	// A comment
+	type A int
+	// B comment
+	type B *int
+	// C comment
+	type C []*int
+	// D comment
+	type D map[string]*int
+	// E comment
+	type E chan<- int
+	// F comment
+	type F = struct{}
+	// G comment
+	type G = *struct{}
+`)
+	src, err := format.Source(src)
+	if err != nil {
+		t.Fatal(err)
+	}
+	f, err := aster.ParseFile("../_out/alias1.go", src)
+	if err != nil {
+		t.Fatal(err)
+	}
+	f.Inspect(func(n aster.Node) bool {
+		t.Log(n)
+		return true
+	})
+}
+
+func TestFunc(t *testing.T) {
+	var src = []byte(`package test
+	// S comment
+	type S struct {}
+	// String comment
+	func(s *S)String()string {return ""}
+	// F1 comment
+	func F1(i int){}
+	// F2 FuncLit!
+	var F2=func()int{}
+`)
+	src, err := format.Source(src)
+	if err != nil {
+		t.Fatal(err)
+	}
+	f, err := aster.ParseFile("../_out/func1.go", src)
+	if err != nil {
+		t.Fatal(err)
+	}
+	f.Inspect(func(n aster.Node) bool {
+		if n.Kind() == aster.Func {
+			t.Log(n.String())
+		}
+		return true
+	})
 }

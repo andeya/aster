@@ -278,27 +278,32 @@ func (f *File) collectTypesOtherThanStruct() {
 	f.collectTypeSpecs(func(node *ast.TypeSpec, doc *ast.CommentGroup) {
 		namePtr := &node.Name.Name
 		var t Node
-		switch x := getElem(node.Type).(type) {
-		case *ast.SelectorExpr:
-			t = f.newAliasType(namePtr, doc, node.Assign, x)
+		elem := getElem(node.Type)
+		if elem != node.Type {
+			t = f.newAliasType(namePtr, doc, node.Assign, node.Type)
+		} else {
+			switch x := elem.(type) {
+			case *ast.SelectorExpr:
+				t = f.newAliasType(namePtr, doc, node.Assign, x)
 
-		case *ast.Ident:
-			t = f.newBasicOrAliasType(namePtr, doc, node.Assign, x)
+			case *ast.Ident:
+				t = f.newBasicOrAliasType(namePtr, doc, node.Assign, x)
 
-		case *ast.ChanType:
-			t = f.newChanType(namePtr, doc, node.Assign, x)
+			case *ast.ChanType:
+				t = f.newChanType(namePtr, doc, node.Assign, x)
 
-		case *ast.ArrayType:
-			t = f.newListType(namePtr, doc, node.Assign, x)
+			case *ast.ArrayType:
+				t = f.newListType(namePtr, doc, node.Assign, x)
 
-		case *ast.MapType:
-			t = f.newMapType(namePtr, doc, node.Assign, x)
+			case *ast.MapType:
+				t = f.newMapType(namePtr, doc, node.Assign, x)
 
-		case *ast.InterfaceType:
-			t = f.newInterfaceType(namePtr, doc, node.Assign, x)
+			case *ast.InterfaceType:
+				t = f.newInterfaceType(namePtr, doc, node.Assign, x)
 
-		default:
-			return
+			default:
+				return
+			}
 		}
 		f.Nodes[t.Node().Pos()] = t
 	})
