@@ -8,9 +8,8 @@ go:
   - "1.11"
 go_import_path: github.com/henrylee2cn/aster
 env:
-  - GIMME_ARCH=amd64
-  - GIMME_ARCH=386
-  - GO111MODULE=on
+  - GIMME_ARCH=amd64 GO111MODULE=on
+  - GIMME_ARCH=386 GO111MODULE=on
 script:
   - go get -d -t ./...
   - go test -v ./_examples
