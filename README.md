@@ -31,7 +31,7 @@ Under development, not for production...
 
 - Set struct tag
 
-```go
+```golang
 package main
 
 import (
@@ -82,28 +82,28 @@ func main() {
 	f, _ := aster.ParseFile(*filename, *src)
 	f.Inspect(setStructTag)
 	retCode, _ := f.Format()
-    fmt.Println(retCode)
-    _ = f.Store()
+	fmt.Println(retCode)
+	_ = f.Store()
 }
 ```
 
-  - The output of the above program is:
+- The output of the above program is:
 
-	```go
-	package test
+```golang
+package test
 
-	type S struct {
-		Apple       string `json:"apple,omitempty"`
-		BananaPeel  string `json:"banana_peel,omitempty"`
-		car         string
-		OrangeWater string `json:"orange_water,omitempty"`
-		E           int    `json:"e,omitempty"`
+type S struct {
+	Apple       string `json:"apple,omitempty"`
+	BananaPeel  string `json:"banana_peel,omitempty"`
+	car         string
+	OrangeWater string `json:"orange_water,omitempty"`
+	E           int    `json:"e,omitempty"`
+}
+
+func F() {
+	type M struct {
+		N         int `json:"n,omitempty"`
+		lowerCase string
 	}
-
-	func F() {
-		type M struct {
-			N         int `json:"n,omitempty"`
-			lowerCase string
-		}
-	}
-	```
+}
+```

@@ -80,8 +80,8 @@ func main() {
 	f, _ := aster.ParseFile(*filename, *src)
 	f.Inspect(setStructTag)
 	retCode, _ := f.Format()
-    fmt.Println(retCode)
-    _ = f.Store()
+	fmt.Println(retCode)
+	_ = f.Store()
 }
 ```
 
