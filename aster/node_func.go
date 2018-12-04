@@ -62,6 +62,14 @@ func (f *FuncDecl) String() string {
 	if err != nil {
 		return fmt.Sprintf("// Formatting error: %s", err.Error())
 	}
+	if _, ok := f.node.(*ast.FuncDecl); ok {
+		return s
+	}
+	s = "var " + f.Name() + " = " + s
+	doc := f.Doc()
+	if doc != "" {
+		s = "// " + doc + s
+	}
 	return s
 }
 

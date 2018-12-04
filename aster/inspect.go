@@ -214,13 +214,10 @@ func (p *Package) collectNodes() {
 // otherwise use *Package.collectNodes()
 func (f *File) collectNodes(singleParsing bool) {
 	f.Nodes = make(map[token.Pos]Node)
-
-	f.collectFuncs()
-
 	f.collectTypesOtherThanStruct()
+	f.collectFuncs()
 	f.collectStructs()
 	f.setStructFields()
-
 	if singleParsing {
 		f.bindMethods()
 	}
@@ -229,13 +226,8 @@ func (f *File) collectNodes(singleParsing bool) {
 func (f *File) collectFuncs() {
 	collectFuncs := func(n ast.Node) bool {
 		var t *FuncDecl
-		var funcType *ast.FuncType
 		switch x := n.(type) {
-		case *ast.FuncLit:
-			funcType = x.Type
-			t = f.newFuncNode(nil, nil, x, nil, nil, nil)
 		case *ast.FuncDecl:
-			funcType = x.Type
 			var recv *FuncField
 			if recvs := f.expandFuncFields(x.Recv); len(recvs) > 0 {
 				recv = recvs[0]
@@ -245,8 +237,8 @@ func (f *File) collectFuncs() {
 				x.Doc,
 				x,
 				recv,
-				f.expandFuncFields(funcType.Params),
-				f.expandFuncFields(funcType.Results),
+				f.expandFuncFields(x.Type.Params),
+				f.expandFuncFields(x.Type.Results),
 			)
 		default:
 			return true
@@ -255,6 +247,45 @@ func (f *File) collectFuncs() {
 		return true
 	}
 	ast.Inspect(f.File, collectFuncs)
+
+	// recover value functions
+	f.collectValueSpecs(func(n *ast.ValueSpec, doc *ast.CommentGroup) {
+		if n.Doc != nil {
+			doc = n.Doc
+		}
+		for k, v := range n.Values {
+			fl, ok := v.(*ast.FuncLit)
+			if !ok {
+				continue
+			}
+			t := f.newFuncNode(
+				&n.Names[k].Name,
+				doc,
+				fl,
+				nil,
+				f.expandFuncFields(fl.Type.Params),
+				f.expandFuncFields(fl.Type.Results),
+			)
+			f.Nodes[t.Node().Pos()] = t
+		}
+	})
+}
+
+func (f *File) collectValueSpecs(fn func(*ast.ValueSpec, *ast.CommentGroup)) {
+	ast.Inspect(f.File, func(n ast.Node) bool {
+		if decl, ok := n.(*ast.GenDecl); ok {
+			doc := decl.Doc
+			for _, spec := range decl.Specs {
+				if td, ok := spec.(*ast.ValueSpec); ok {
+					if td.Doc != nil {
+						doc = td.Doc
+					}
+					fn(td, doc)
+				}
+			}
+		}
+		return true
+	})
 }
 
 func (f *File) collectTypeSpecs(fn func(*ast.TypeSpec, *ast.CommentGroup)) {
