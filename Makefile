@@ -35,3 +35,6 @@ wipe: clean
 
 get-deps:
 	go get -d -t ./...
+
+coverage:
+	./coverage.sh
