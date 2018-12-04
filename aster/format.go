@@ -16,6 +16,7 @@ package aster
 
 import (
 	"bytes"
+	"fmt"
 	"go/ast"
 	"go/format"
 	"os"
@@ -95,12 +96,21 @@ func (p *Package) Format() (codes map[string]string, first error) {
 	return
 }
 
-// Format format the file and returns the string.
+// Format formats the file and returns the string.
 func (f *File) Format() (string, error) {
 	return f.FormatNode(f.File)
 }
 
-// FormatNode format the node and returns the string.
+// String returns the formated file text.
+func (f *File) String() string {
+	s, err := f.Format()
+	if err != nil {
+		return fmt.Sprintf("// Formatting error: %s", err.Error())
+	}
+	return s
+}
+
+// FormatNode formats the node and returns the string.
 func (m *Module) FormatNode(node ast.Node) (string, error) {
 	var dst bytes.Buffer
 	err := format.Node(&dst, m.FileSet, node)
@@ -110,7 +120,7 @@ func (m *Module) FormatNode(node ast.Node) (string, error) {
 	return goutil.BytesToString(dst.Bytes()), nil
 }
 
-// FormatNode format the node and returns the string.
+// FormatNode formats the node and returns the string.
 func (p *Package) FormatNode(node ast.Node) (string, error) {
 	var dst bytes.Buffer
 	err := format.Node(&dst, p.FileSet, node)
@@ -120,7 +130,7 @@ func (p *Package) FormatNode(node ast.Node) (string, error) {
 	return goutil.BytesToString(dst.Bytes()), nil
 }
 
-// FormatNode format the node and returns the string.
+// FormatNode formats the node and returns the string.
 func (f *File) FormatNode(node ast.Node) (string, error) {
 	var dst bytes.Buffer
 	err := format.Node(&dst, f.FileSet, node)
@@ -130,7 +140,7 @@ func (f *File) FormatNode(node ast.Node) (string, error) {
 	return goutil.BytesToString(dst.Bytes()), nil
 }
 
-// TryFormatNode format the node and returns the string,
+// TryFormatNode formats the node and returns the string,
 // returns the default string if fail.
 func (f *File) TryFormatNode(node ast.Node, defaultValue ...string) string {
 	code, err := f.FormatNode(node)
