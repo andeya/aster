@@ -107,7 +107,7 @@ func TestBasic(t *testing.T) {
 		t.Fatal(err)
 	}
 	f.Inspect(func(n aster.Node) bool {
-		t.Log(n)
+		t.Log(n.Kind(), n)
 		return true
 	})
 }

@@ -226,6 +226,8 @@ type FuncField struct {
 	TypeName string // not contain `*`
 }
 
+//go:generate Stringer -type Kind
+
 // A Kind represents the specific kind of type that a Type represents.
 // The zero Kind is not a valid kind.
 type Kind uint
