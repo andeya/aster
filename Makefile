@@ -18,14 +18,12 @@ install: gomod
 	go install ./...
 
 test:
-	go test -v ./_examples
-	go test -v ./_test
 	go test -v ./...
+	go test -v ./_examples
 
 bench:
-	go test -bench ./_examples
-	go test -bench ./_test
 	go test -bench ./...
+	go test -bench ./_examples
 
 clean:
 	rm -rf $(OUT)
