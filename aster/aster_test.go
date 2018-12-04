@@ -29,6 +29,7 @@ type S struct {
 	if !ok {
 		t.FailNow()
 	}
+	t.Logf("package:%s, filename:%s, typename:%s", s.PkgName(), s.Filename(), s.Name())
 
 	// test tag
 	aField, ok := s.FieldByName("A")
