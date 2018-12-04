@@ -1,0 +1,2042 @@
+
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+		<style>
+			body {
+				background: black;
+				color: rgb(80, 80, 80);
+			}
+			body, pre, #legend span {
+				font-family: Menlo, monospace;
+				font-weight: bold;
+			}
+			#topbar {
+				background: black;
+				position: fixed;
+				top: 0; left: 0; right: 0;
+				height: 42px;
+				border-bottom: 1px solid rgb(80, 80, 80);
+			}
+			#content {
+				margin-top: 50px;
+			}
+			#nav, #legend {
+				float: left;
+				margin-left: 10px;
+			}
+			#legend {
+				margin-top: 12px;
+			}
+			#nav {
+				margin-top: 10px;
+			}
+			#legend span {
+				margin: 0 5px;
+			}
+			.cov0 { color: rgb(192, 0, 0) }
+.cov1 { color: rgb(128, 128, 128) }
+.cov2 { color: rgb(116, 140, 131) }
+.cov3 { color: rgb(104, 152, 134) }
+.cov4 { color: rgb(92, 164, 137) }
+.cov5 { color: rgb(80, 176, 140) }
+.cov6 { color: rgb(68, 188, 143) }
+.cov7 { color: rgb(56, 200, 146) }
+.cov8 { color: rgb(44, 212, 149) }
+.cov9 { color: rgb(32, 224, 152) }
+.cov10 { color: rgb(20, 236, 155) }
+
+		</style>
+	</head>
+	<body>
+		<div id="topbar">
+			<div id="nav">
+				<select id="files">
+				
+				<option value="file0">github.com/henrylee2cn/aster/aster/ast.go (6.2%)</option>
+				
+				<option value="file1">github.com/henrylee2cn/aster/aster/format.go (24.6%)</option>
+				
+				<option value="file2">github.com/henrylee2cn/aster/aster/inspect.go (44.3%)</option>
+				
+				<option value="file3">github.com/henrylee2cn/aster/aster/node_func.go (0.0%)</option>
+				
+				<option value="file4">github.com/henrylee2cn/aster/aster/node_type.go (28.0%)</option>
+				
+				<option value="file5">github.com/henrylee2cn/aster/aster/parser.go (32.3%)</option>
+				
+				</select>
+			</div>
+			<div id="legend">
+				<span>not tracked</span>
+			
+				<span class="cov0">no coverage</span>
+				<span class="cov1">low coverage</span>
+				<span class="cov2">*</span>
+				<span class="cov3">*</span>
+				<span class="cov4">*</span>
+				<span class="cov5">*</span>
+				<span class="cov6">*</span>
+				<span class="cov7">*</span>
+				<span class="cov8">*</span>
+				<span class="cov9">*</span>
+				<span class="cov10">high coverage</span>
+			
+			</div>
+		</div>
+		<div id="content">
+		
+		<pre class="file" id="file0" style="display: none">// Package aster is golang coding efficiency engine.
+//
+// Copyright 2018 henrylee2cn. All Rights Reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+package aster
+
+import (
+        "go/ast"
+        "go/parser"
+        "go/token"
+        "os"
+)
+
+// Module packages AST
+type Module struct {
+        FileSet  *token.FileSet
+        Dir      string
+        filter   func(os.FileInfo) bool
+        Packages map[string]*Package // &lt;package name, *Package&gt;
+        mode     parser.Mode
+}
+
+// A Package node represents a set of source files
+// collectively building a Go package.
+//
+type Package struct {
+        module  *Module // nil when not existed
+        FileSet *token.FileSet
+        Dir     string
+        Name    string                 // package name
+        Scope   *ast.Scope             // package scope across all files
+        Imports map[string]*ast.Object // map of package id -&gt; package object
+        Files   map[string]*File       // Go source files by filename
+        mode    parser.Mode
+}
+
+// A File node represents a Go source file.
+//
+// The Comments list contains all comments in the source file in order of
+// appearance, including the comments that are pointed to from other nodes
+// via Doc and Comment fields.
+//
+// For correct printing of source code containing comments (using packages
+// go/format and go/printer), special care must be taken to update comments
+// when a File's syntax tree is modified: For printing, comments are interspersed
+// between tokens based on their position. If syntax tree nodes are
+// removed or moved, relevant comments in their vicinity must also be removed
+// (from the File.Comments list) or moved accordingly (by updating their
+// positions). A CommentMap may be used to facilitate some of these operations.
+//
+// Whether and how a comment is associated with a node depends on the
+// interpretation of the syntax tree by the manipulating program: Except for Doc
+// and Comment comments directly associated with nodes, the remaining comments
+// are "free-floating" (see also issues #18593, #20744).
+//
+type File struct {
+        *ast.File
+        pkg      *Package // nil when not existed
+        PkgName  string
+        FileSet  *token.FileSet
+        Filename string
+        Src      []byte
+        mode     parser.Mode
+        Imports  []*Import
+        Nodes    map[token.Pos]Node // &lt;type node pos, Node&gt;
+}
+
+// Import import info
+type Import struct {
+        *ast.ImportSpec
+        Name string
+        Path string
+        Doc  *ast.CommentGroup
+}
+
+type (
+        // Node the basic sub-interface based on ast.Node extension,
+        // is the supertype of other extended interfaces.
+        Node interface {
+                CommNodeMethods
+                FuncNodeMethods
+                TypeNodeMethods
+                blockIdentify() // only as identify method
+        }
+        // FuncNode is the representation of a Go function or method.
+        // NOTE: Kind = Func
+        FuncNode interface {
+                CommNodeMethods
+                FuncNodeMethods
+                funcNodeIdentify() // only as identify method
+        }
+        // TypeNode is the representation of a Go type node.
+        // NOTE: Kind != Func
+        TypeNode interface {
+                CommNodeMethods
+                TypeNodeMethods
+                typeNodeIdentify() // only as identify method
+        }
+)
+
+type (
+        // CommNodeMethods is the common methods of block interface.
+        CommNodeMethods interface {
+                // Node returns origin AST node.
+                Node() ast.Node
+
+                // Name returns the type's name within its package for a defined type.
+                // For other (non-defined) types it returns the empty string.
+                Name() string
+
+                // Kind returns the specific kind of this type.
+                Kind() Kind
+
+                // Doc returns lead comment.
+                Doc() string
+        }
+
+        // TypeNodeMethods is the representation of a Go type node.
+        // NOTE: Kind != Func
+        TypeNodeMethods interface {
+                // IsAssign is there `=` for declared type?
+                IsAssign() bool
+
+                // NumMethod returns the number of exported methods in the type's method set.
+                NumMethod() int
+
+                // Method returns the i'th method in the type's method set.
+                // For a non-interface type T or *T, the returned Method's Type and Func
+                // fields describe a function whose first argument is the receiver.
+                //
+                // For an interface type, the returned Method's Type field gives the
+                // method signature, without a receiver, and the Func field is nil.
+                Method(int) (FuncNode, bool)
+
+                // MethodByName returns the method with that name in the type's
+                // method set and a boolean indicating if the method was found.
+                //
+                // For a non-interface type T or *T, the returned Method's Type and Func
+                // fields describe a function whose first argument is the receiver.
+                //
+                // For an interface type, the returned Method's Type field gives the
+                // method signature, without a receiver, and the Func field is nil.
+                MethodByName(string) (FuncNode, bool)
+
+                // Implements reports whether the type implements the interface type u.
+                Implements(u TypeNode) bool
+
+                // addMethod adds a FuncNode as method.
+                //
+                // Returns error if the FuncNode is already exist or receiver is not the TypeNode.
+                addMethod(FuncNode) error
+
+                // -------------- Only for Kind=Struct ---------------
+
+                // NumField returns a struct type's field count.
+                // It panics if the type's Kind is not Struct.
+                NumField() int
+
+                // Field returns a struct type's i'th field.
+                // It panics if the type's Kind is not Struct.
+                // It panics if i is not in the range [0, NumField()).
+                Field(int) *StructField
+
+                // FieldByName returns the struct field with the given name
+                // and a boolean indicating if the field was found.
+                // It panics if the type's Kind is not Struct.
+                FieldByName(name string) (field *StructField, found bool)
+        }
+
+        // FuncNodeMethods is the representation of a Go function or method.
+        // NOTE: Kind = Func
+        FuncNodeMethods interface {
+                // NumParam returns a function type's input parameter count.
+                NumParam() int
+
+                // NumResult returns a function type's output parameter count.
+                NumResult() int
+
+                // Param returns the type of a function type's i'th input parameter.
+                Param(int) (*FuncField, bool)
+
+                // Result returns the type of a function type's i'th output parameter.
+                Result(int) (*FuncField, bool)
+
+                // IsVariadic reports whether a function type's final input parameter
+                // is a "..." parameter. If so, t.In(t.NumIn() - 1) returns the parameter's
+                // implicit actual type []T.
+                //
+                // For concreteness, if t represents func(x int, y ... float64), then
+                //
+                //        f.NumParam() == 2
+                //        f.Param(0) is the Type for "int"
+                //        f.Param(1) is the Type for "[]float64"
+                //        f.IsVariadic() == true
+                //
+                IsVariadic() bool
+
+                // Recv returns receiver (methods); or returns false (functions)
+                Recv() (*FuncField, bool)
+        }
+)
+
+// FuncField function params or results.
+type FuncField struct {
+        Name     string
+        TypeName string // not contain `*`
+}
+
+// A Kind represents the specific kind of type that a Type represents.
+// The zero Kind is not a valid kind.
+type Kind uint
+
+// Kind enumerate
+const (
+        Invalid Kind = iota
+        Suspense
+        Bool
+        Int
+        Int8
+        Int16
+        Int32
+        Int64
+        Uint
+        Uint8
+        Uint16
+        Uint32
+        Uint64
+        Uintptr
+        Float32
+        Float64
+        Complex64
+        Complex128
+        String
+        Interface
+        Chan
+        Array
+        Slice
+        Map
+        Func
+        Struct
+        // Ptr
+)
+
+func getBasicKind(basicName string) (k Kind, found bool) <span class="cov0" title="0">{
+        found = true
+        switch basicName </span>{
+        case "bool":<span class="cov0" title="0">
+                k = Bool</span>
+        case "int":<span class="cov0" title="0">
+                k = Int</span>
+        case "int8":<span class="cov0" title="0">
+                k = Int8</span>
+        case "int16":<span class="cov0" title="0">
+                k = Int16</span>
+        case "int32":<span class="cov0" title="0">
+                k = Int32</span>
+        case "int64":<span class="cov0" title="0">
+                k = Int64</span>
+        case "uint":<span class="cov0" title="0">
+                k = Uint</span>
+        case "uint8":<span class="cov0" title="0">
+                k = Uint8</span>
+        case "uint16":<span class="cov0" title="0">
+                k = Uint16</span>
+        case "uint32":<span class="cov0" title="0">
+                k = Uint32</span>
+        case "uint64":<span class="cov0" title="0">
+                k = Uint64</span>
+        case "uintptr":<span class="cov0" title="0">
+                k = Uintptr</span>
+        case "float32":<span class="cov0" title="0">
+                k = Float32</span>
+        case "float64":<span class="cov0" title="0">
+                k = Float64</span>
+        case "complex64":<span class="cov0" title="0">
+                k = Complex64</span>
+        case "complex128":<span class="cov0" title="0">
+                k = Complex128</span>
+        case "string":<span class="cov0" title="0">
+                k = String</span>
+        default:<span class="cov0" title="0">
+                return Invalid, false</span>
+        }
+        <span class="cov0" title="0">return</span>
+}
+
+// NilNode nil Node
+type NilNode struct{}
+
+// Pos .
+func (NilNode) Pos() token.Pos <span class="cov0" title="0">{ return token.NoPos }</span>
+
+// End .
+func (NilNode) End() token.Pos <span class="cov0" title="0">{ return token.NoPos }</span>
+
+// super common node extension info
+type super struct {
+        file    *File
+        kind    Kind
+        namePtr *string
+        doc     *ast.CommentGroup
+}
+
+func (f *File) newSuper(namePtr *string, kind Kind, doc *ast.CommentGroup) *super <span class="cov8" title="1">{
+        return &amp;super{
+                file:    f,
+                kind:    kind,
+                namePtr: namePtr,
+                doc:     doc,
+        }
+}</span>
+
+func (s *super) blockIdentify() {<span class="cov0" title="0">}</span>
+
+// Kind returns the facade kind of this node.
+func (s *super) Kind() Kind <span class="cov0" title="0">{
+        return s.kind
+}</span>
+
+// Name returns the type's name within its package for a defined type.
+// For other (non-defined) types it returns the empty string.
+func (s *super) Name() string <span class="cov8" title="1">{
+        if s.namePtr == nil </span><span class="cov0" title="0">{
+                return ""
+        }</span>
+        <span class="cov8" title="1">return *s.namePtr</span>
+}
+
+// Doc returns lead comment.
+func (s *super) Doc() string <span class="cov0" title="0">{
+        if s.doc == nil </span><span class="cov0" title="0">{
+                return ""
+        }</span>
+        <span class="cov0" title="0">return s.doc.Text()</span>
+}
+
+// ------------------------ Kind: Func ------------------------
+
+// NumParam returns a function type's input parameter count.
+func (s *super) NumParam() int <span class="cov0" title="0">{
+        if s.kind != Func </span><span class="cov0" title="0">{
+                panic("aster: Kind must be aster.Func!")</span>
+        }
+        <span class="cov0" title="0">panic("aster: (TODO) Coming soon!")</span>
+}
+
+// NumResult returns a function type's output parameter count.
+func (s *super) NumResult() int <span class="cov0" title="0">{
+        if s.kind != Func </span><span class="cov0" title="0">{
+                panic("aster: Kind must be aster.Func!")</span>
+        }
+        <span class="cov0" title="0">panic("aster: (TODO) Coming soon!")</span>
+}
+
+// Param returns the type of a function type's i'th input parameter.
+func (s *super) Param(int) (*FuncField, bool) <span class="cov0" title="0">{
+        if s.kind != Func </span><span class="cov0" title="0">{
+                panic("aster: Kind must be aster.Func!")</span>
+        }
+        <span class="cov0" title="0">panic("aster: (TODO) Coming soon!")</span>
+}
+
+// Result returns the type of a function type's i'th output parameter.
+func (s *super) Result(int) (*FuncField, bool) <span class="cov0" title="0">{
+        if s.kind != Func </span><span class="cov0" title="0">{
+                panic("aster: Kind must be aster.Func!")</span>
+        }
+        <span class="cov0" title="0">panic("aster: (TODO) Coming soon!")</span>
+}
+
+// IsVariadic reports whether a function type's final input parameter
+// is a "..." parameter. If so, t.In(t.NumIn() - 1) returns the parameter's
+// implicit actual type []T.
+//
+// For concreteness, if t represents func(x int, y ... float64), then
+//
+//        f.NumParam() == 2
+//        f.Param(0) is the Type for "int"
+//        f.Param(1) is the Type for "[]float64"
+//        f.IsVariadic() == true
+//
+func (s *super) IsVariadic() bool <span class="cov0" title="0">{
+        if s.kind != Func </span><span class="cov0" title="0">{
+                panic("aster: Kind must be aster.Func!")</span>
+        }
+        <span class="cov0" title="0">panic("aster: (TODO) Coming soon!")</span>
+}
+
+// Recv returns receiver (methods); or returns false (functions)
+func (s *super) Recv() (*FuncField, bool) <span class="cov0" title="0">{
+        if s.kind != Func </span><span class="cov0" title="0">{
+                panic("aster: Kind must be aster.Func!")</span>
+        }
+        <span class="cov0" title="0">panic("aster: (TODO) Coming soon!")</span>
+}
+
+// IsFuncNode returns true if b is implementd FuncNode.
+func IsFuncNode(b Node) bool <span class="cov0" title="0">{
+        _, ok := b.(FuncNode)
+        return ok
+}</span>
+
+// IsTypeNode returns true if b is implementd TypeNode.
+func IsTypeNode(b Node) bool <span class="cov8" title="1">{
+        _, ok := b.(TypeNode)
+        return ok
+}</span>
+
+// ------------------------ Type ------------------------
+
+// IsAssign is there `=` for declared type?
+func (s *super) IsAssign() bool <span class="cov0" title="0">{
+        if s.kind == Func </span><span class="cov0" title="0">{
+                panic("aster: Kind cant not be aster.Func!")</span>
+        }
+        <span class="cov0" title="0">panic("aster: (TODO) Coming soon!")</span>
+}
+
+// NumMethod returns the number of exported methods in the type's method set.
+func (s *super) NumMethod() int <span class="cov0" title="0">{
+        if s.kind == Func </span><span class="cov0" title="0">{
+                panic("aster: Kind cant not be aster.Func!")</span>
+        }
+        <span class="cov0" title="0">panic("aster: (TODO) Coming soon!")</span>
+}
+
+// Method returns the i'th method in the type's method set.
+// For a non-interface type T or *T, the returned Method's Type and Func
+// fields describe a function whose first argument is the receiver.
+//
+// For an interface type, the returned Method's Type field gives the
+// method signature, without a receiver, and the Func field is nil.
+func (s *super) Method(int) (FuncNode, bool) <span class="cov0" title="0">{
+        if s.kind == Func </span><span class="cov0" title="0">{
+                panic("aster: Kind cant not be aster.Func!")</span>
+        }
+        <span class="cov0" title="0">panic("aster: (TODO) Coming soon!")</span>
+}
+
+// MethodByName returns the method with that name in the type's
+// method set and a boolean indicating if the method was found.
+//
+// For a non-interface type T or *T, the returned Method's Type and Func
+// fields describe a function whose first argument is the receiver.
+//
+// For an interface type, the returned Method's Type field gives the
+// method signature, without a receiver, and the Func field is nil.
+func (s *super) MethodByName(string) (FuncNode, bool) <span class="cov0" title="0">{
+        if s.kind == Func </span><span class="cov0" title="0">{
+                panic("aster: Kind cant not be aster.Func!")</span>
+        }
+        <span class="cov0" title="0">panic("aster: (TODO) Coming soon!")</span>
+}
+
+// Implements reports whether the type implements the interface type u.
+func (s *super) Implements(u TypeNode) bool <span class="cov0" title="0">{
+        if s.kind == Func </span><span class="cov0" title="0">{
+                panic("aster: Kind cant not be aster.Func!")</span>
+        }
+        <span class="cov0" title="0">panic("aster: (TODO) Coming soon!")</span>
+}
+
+// addMethod adds a FuncNode as method.
+//
+// Returns error if the FuncNode is already exist or receiver is not the TypeNode.
+func (s *super) addMethod(FuncNode) error <span class="cov0" title="0">{
+        if s.kind == Func </span><span class="cov0" title="0">{
+                panic("aster: Kind cant not be aster.Func!")</span>
+        }
+        <span class="cov0" title="0">panic("aster: (TODO) Coming soon!")</span>
+}
+
+// -------------- Only for Kind=Struct ---------------
+
+// NumField returns a struct type's field count.
+func (s *super) NumField() int <span class="cov0" title="0">{
+        if s.kind != Struct </span><span class="cov0" title="0">{
+                panic("aster: Kind must be aster.Struct!")</span>
+        }
+        <span class="cov0" title="0">panic("aster: (TODO) Coming soon!")</span>
+}
+
+// Field returns a struct type's i'th field.
+func (s *super) Field(int) *StructField <span class="cov0" title="0">{
+        if s.kind != Struct </span><span class="cov0" title="0">{
+                panic("aster: Kind must be aster.Struct!")</span>
+        }
+        <span class="cov0" title="0">panic("aster: (TODO) Coming soon!")</span>
+}
+
+// FieldByName returns the struct field with the given name
+// and a boolean indicating if the field was found.
+func (s *super) FieldByName(name string) (field *StructField, found bool) <span class="cov0" title="0">{
+        if s.kind != Struct </span><span class="cov0" title="0">{
+                panic("aster: Kind must be aster.Struct!")</span>
+        }
+        <span class="cov0" title="0">panic("aster: (TODO) Coming soon!")</span>
+}
+</pre>
+		
+		<pre class="file" id="file1" style="display: none">// Copyright 2018 henrylee2cn. All Rights Reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+package aster
+
+import (
+        "bytes"
+        "go/ast"
+        "go/format"
+        "os"
+        "path/filepath"
+
+        "github.com/henrylee2cn/goutil"
+)
+
+// Store formats the module codes and writes to the local files.
+func (m *Module) Store() (first error) <span class="cov0" title="0">{
+        codes, first := m.Format()
+        if first != nil </span><span class="cov0" title="0">{
+                return first
+        }</span>
+        <span class="cov0" title="0">for _, v := range codes </span><span class="cov0" title="0">{
+                for kk, vv := range v </span><span class="cov0" title="0">{
+                        first = writeFile(kk, vv)
+                        if first != nil </span><span class="cov0" title="0">{
+                                return first
+                        }</span>
+                }
+        }
+        <span class="cov0" title="0">return</span>
+}
+
+// Store formats the package codes and writes to the local files.
+func (p *Package) Store() (first error) <span class="cov0" title="0">{
+        codes, first := p.Format()
+        if first != nil </span><span class="cov0" title="0">{
+                return
+        }</span>
+        <span class="cov0" title="0">for k, v := range codes </span><span class="cov0" title="0">{
+                first = writeFile(k, v)
+                if first != nil </span><span class="cov0" title="0">{
+                        return first
+                }</span>
+        }
+        <span class="cov0" title="0">return</span>
+}
+
+// Store formats the file codes and writes to the local file.
+func (f *File) Store() (err error) <span class="cov1" title="1">{
+        code, err := f.Format()
+        if err != nil </span><span class="cov0" title="0">{
+                return
+        }</span>
+        <span class="cov1" title="1">return writeFile(f.Filename, code)</span>
+}
+
+// Format format the package and returns the string.
+// @codes &lt;packageName,&lt;fileName,code&gt;&gt;
+func (m *Module) Format() (codes map[string]map[string]string, first error) <span class="cov0" title="0">{
+        codes = make(map[string]map[string]string, len(m.Packages))
+        for k, v := range m.Packages </span><span class="cov0" title="0">{
+                subcodes, err := v.Format()
+                if err != nil </span><span class="cov0" title="0">{
+                        first = err
+                        return
+                }</span>
+                <span class="cov0" title="0">codes[k] = subcodes</span>
+        }
+        <span class="cov0" title="0">return</span>
+}
+
+// Format format the package and returns the string.
+// @codes &lt;fileName,code&gt;
+func (p *Package) Format() (codes map[string]string, first error) <span class="cov0" title="0">{
+        codes = make(map[string]string, len(p.Files))
+        var code string
+        for k, v := range p.Files </span><span class="cov0" title="0">{
+                code, first = v.Format()
+                if first != nil </span><span class="cov0" title="0">{
+                        return
+                }</span>
+                <span class="cov0" title="0">codes[k] = code</span>
+        }
+        <span class="cov0" title="0">return</span>
+}
+
+// Format format the file and returns the string.
+func (f *File) Format() (string, error) <span class="cov6" title="2">{
+        return f.FormatNode(f.File)
+}</span>
+
+// FormatNode format the node and returns the string.
+func (m *Module) FormatNode(node ast.Node) (string, error) <span class="cov0" title="0">{
+        var dst bytes.Buffer
+        err := format.Node(&amp;dst, m.FileSet, node)
+        if err != nil </span><span class="cov0" title="0">{
+                return "", err
+        }</span>
+        <span class="cov0" title="0">return goutil.BytesToString(dst.Bytes()), nil</span>
+}
+
+// FormatNode format the node and returns the string.
+func (p *Package) FormatNode(node ast.Node) (string, error) <span class="cov0" title="0">{
+        var dst bytes.Buffer
+        err := format.Node(&amp;dst, p.FileSet, node)
+        if err != nil </span><span class="cov0" title="0">{
+                return "", err
+        }</span>
+        <span class="cov0" title="0">return goutil.BytesToString(dst.Bytes()), nil</span>
+}
+
+// FormatNode format the node and returns the string.
+func (f *File) FormatNode(node ast.Node) (string, error) <span class="cov10" title="3">{
+        var dst bytes.Buffer
+        err := format.Node(&amp;dst, f.FileSet, node)
+        if err != nil </span><span class="cov0" title="0">{
+                return "", err
+        }</span>
+        <span class="cov10" title="3">return goutil.BytesToString(dst.Bytes()), nil</span>
+}
+
+// TryFormatNode format the node and returns the string,
+// returns the default string if fail.
+func (f *File) TryFormatNode(node ast.Node, defaultValue ...string) string <span class="cov0" title="0">{
+        code, err := f.FormatNode(node)
+        if err != nil &amp;&amp; len(defaultValue) &gt; 0 </span><span class="cov0" title="0">{
+                return defaultValue[0]
+        }</span>
+        <span class="cov0" title="0">return code</span>
+}
+
+func writeFile(filename, text string) error <span class="cov1" title="1">{
+        filename, err := filepath.Abs(filename)
+        if err != nil </span><span class="cov0" title="0">{
+                return err
+        }</span>
+        <span class="cov1" title="1">dir := filepath.Dir(filename)
+        err = os.MkdirAll(dir, 0777)
+        if err != nil </span><span class="cov0" title="0">{
+                return err
+        }</span>
+        <span class="cov1" title="1">f, err := os.Create(filename)
+        if err != nil </span><span class="cov0" title="0">{
+                return err
+        }</span>
+        <span class="cov1" title="1">_, err = f.Write(goutil.StringToBytes(text))
+        return err</span>
+}
+</pre>
+		
+		<pre class="file" id="file2" style="display: none">// Copyright 2018 henrylee2cn. All Rights Reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+package aster
+
+import (
+        "go/ast"
+        "go/token"
+        "strings"
+)
+
+// Module returns module object if exist.
+func (p *Package) Module() (*Module, bool) <span class="cov0" title="0">{
+        return p.module, p.module != nil
+}</span>
+
+// Package returns package object if exist.
+func (f *File) Package() (*Package, bool) <span class="cov0" title="0">{
+        return f.pkg, f.pkg != nil
+}</span>
+
+// LookupType lookups TypeNode by type name in current package.
+func (p *Package) LookupType(name string) (t TypeNode, found bool) <span class="cov0" title="0">{
+        fn, ok := createTypeNodeByNameInPkg(name)
+        if !ok </span><span class="cov0" title="0">{
+                return
+        }</span>
+        <span class="cov0" title="0">var nodes []Node
+        for _, v := range p.Files </span><span class="cov0" title="0">{
+                nodes = v.Fetch(fn)
+                if len(nodes) &gt; 0 </span><span class="cov0" title="0">{
+                        return nodes[0].(TypeNode), true
+                }</span>
+        }
+        <span class="cov0" title="0">return</span>
+}
+
+// Fetch fetches node if fn returns true.
+func (f *File) Fetch(fn func(Node) bool) (nodes []Node) <span class="cov1" title="1">{
+        f.Inspect(func(n Node) bool </span><span class="cov1" title="1">{
+                next := fn(n)
+                if next </span><span class="cov1" title="1">{
+                        nodes = append(nodes, n)
+                }</span>
+                <span class="cov1" title="1">return next</span>
+        })
+        <span class="cov1" title="1">return nodes</span>
+}
+
+// Inspect traverses nodes in the file.
+func (f *File) Inspect(fn func(Node) bool) <span class="cov1" title="1">{
+        for _, n := range f.Nodes </span><span class="cov1" title="1">{
+                if !fn(n) </span><span class="cov0" title="0">{
+                        return
+                }</span>
+        }
+}
+
+// LookupImports lookups the import info by package name.
+func (f *File) LookupImports(currPkgName string) (imports []*Import, found bool) <span class="cov0" title="0">{
+        for _, imp := range f.Imports </span><span class="cov0" title="0">{
+                if imp.Name == currPkgName </span><span class="cov0" title="0">{
+                        imports = append(imports, imp)
+                        found = true
+                }</span>
+        }
+        <span class="cov0" title="0">return</span>
+}
+
+// LookupPackages lookups the package object by package name.
+// NOTE: Only lookup the parsed module.
+func (f *File) LookupPackages(currPkgName string) (pkgs []*Package, found bool) <span class="cov0" title="0">{
+        if f.pkg == nil || f.pkg.module == nil </span><span class="cov0" title="0">{
+                return
+        }</span>
+        <span class="cov0" title="0">imps, found := f.LookupImports(currPkgName)
+        if !found </span><span class="cov0" title="0">{
+                return
+        }</span>
+        <span class="cov0" title="0">mod := f.pkg.module
+        for _, imp := range imps </span><span class="cov0" title="0">{
+                if p, ok := mod.Packages[imp.Name]; ok </span><span class="cov0" title="0">{
+                        pkgs = append(pkgs, p)
+                        found = true
+                }</span>
+        }
+        <span class="cov0" title="0">return</span>
+}
+
+// LookupTypeInPkg lookups TypeNode by type name in current package.
+func (f *File) LookupTypeInPkg(name string) (t TypeNode, found bool) <span class="cov0" title="0">{
+        p, ok := f.Package()
+        if ok </span><span class="cov0" title="0">{
+                return p.LookupType(name)
+        }</span>
+        <span class="cov0" title="0">return f.LookupType(name)</span>
+}
+
+// LookupTypeInMod lookup Type by type name in current module.
+func (f *File) LookupTypeInMod(name string) (t TypeNode, found bool) <span class="cov0" title="0">{
+        p, ok := f.Package()
+        if ok </span><span class="cov0" title="0">{
+                t, found = p.LookupType(name)
+        }</span> else<span class="cov0" title="0"> {
+                t, found = f.LookupType(name)
+        }</span>
+        <span class="cov0" title="0">if found </span><span class="cov0" title="0">{
+                return
+        }</span>
+        <span class="cov0" title="0">name = strings.TrimLeft(name, "*")
+        // May be in the other module packages?
+        a := strings.SplitN(name, ".", 2)
+        if len(a) == 1 </span><span class="cov0" title="0">{
+                a = []string{".", name}
+        }</span>
+        <span class="cov0" title="0">pkgs, ok := f.LookupPackages(a[0])
+        if !ok </span><span class="cov0" title="0">{
+                return
+        }</span>
+        <span class="cov0" title="0">for _, p := range pkgs </span><span class="cov0" title="0">{
+                t, found = p.LookupType(a[1])
+                if found </span><span class="cov0" title="0">{
+                        return
+                }</span>
+        }
+        <span class="cov0" title="0">return</span>
+}
+
+// LookupType lookups TypeNode by type name in current file.
+func (f *File) LookupType(name string) (t TypeNode, found bool) <span class="cov1" title="1">{
+        fn, ok := createTypeNodeByNameInPkg(name)
+        if !ok </span><span class="cov0" title="0">{
+                return
+        }</span>
+        <span class="cov1" title="1">nodes := f.Fetch(fn)
+        if len(nodes) &gt; 0 </span><span class="cov1" title="1">{
+                return nodes[0].(TypeNode), true
+        }</span>
+        <span class="cov0" title="0">return</span>
+}
+
+func createTypeNodeByNameInPkg(name string) (func(Node) bool, bool) <span class="cov1" title="1">{
+        if strings.Contains(name, ".") </span><span class="cov0" title="0">{
+                return nil, false
+        }</span>
+        <span class="cov1" title="1">name = strings.TrimLeft(name, "*")
+        return func(b Node) bool </span><span class="cov1" title="1">{
+                return IsTypeNode(b) &amp;&amp; b.Name() == name
+        }</span>, true
+}
+
+func (p *Package) collectNodes() <span class="cov0" title="0">{
+        for _, f := range p.Files </span><span class="cov0" title="0">{
+                f.collectNodes(false)
+        }</span>
+        // Waiting for types ready to do method association
+        <span class="cov0" title="0">for _, f := range p.Files </span><span class="cov0" title="0">{
+                f.bindMethods()
+        }</span>
+}
+
+// Use the method if no other file in the same package,
+// otherwise use *Package.collectNodes()
+func (f *File) collectNodes(singleParsing bool) <span class="cov1" title="1">{
+        f.Nodes = make(map[token.Pos]Node)
+
+        f.collectFuncs()
+
+        f.collectTypesOtherThanStruct()
+        f.collectStructs()
+        f.setStructFields()
+
+        if singleParsing </span><span class="cov1" title="1">{
+                f.bindMethods()
+        }</span>
+}
+
+func (f *File) collectFuncs() <span class="cov1" title="1">{
+        collectFuncs := func(n ast.Node) bool </span><span class="cov10" title="54">{
+                var t *FuncDecl
+                var funcType *ast.FuncType
+                switch x := n.(type) </span>{
+                case *ast.FuncLit:<span class="cov0" title="0">
+                        funcType = x.Type
+                        t = f.newFuncNode(nil, nil, x, nil, nil, nil)</span>
+                case *ast.FuncDecl:<span class="cov0" title="0">
+                        funcType = x.Type
+                        var recv *FuncField
+                        if recvs := f.expandFuncFields(x.Recv); len(recvs) &gt; 0 </span><span class="cov0" title="0">{
+                                recv = recvs[0]
+                        }</span>
+                        <span class="cov0" title="0">t = f.newFuncNode(
+                                &amp;x.Name.Name,
+                                x.Doc,
+                                &amp;ast.FuncLit{
+                                        Type: x.Type,
+                                        Body: x.Body,
+                                },
+                                recv,
+                                f.expandFuncFields(funcType.Params),
+                                f.expandFuncFields(funcType.Results),
+                        )</span>
+                default:<span class="cov10" title="54">
+                        return true</span>
+                }
+                <span class="cov0" title="0">f.Nodes[t.Pos()] = t
+                return true</span>
+        }
+        <span class="cov1" title="1">ast.Inspect(f.File, collectFuncs)</span>
+}
+
+func (f *File) collectTypeSpecs(fn func(*ast.TypeSpec, *ast.CommentGroup)) <span class="cov1" title="1">{
+        ast.Inspect(f.File, func(n ast.Node) bool </span><span class="cov10" title="54">{
+                if decl, ok := n.(*ast.GenDecl); ok </span><span class="cov1" title="1">{
+                        doc := decl.Doc
+                        for _, spec := range decl.Specs </span><span class="cov1" title="1">{
+                                if td, ok := spec.(*ast.TypeSpec); ok </span><span class="cov1" title="1">{
+                                        if td.Doc != nil </span><span class="cov0" title="0">{
+                                                doc = td.Doc
+                                        }</span>
+                                        <span class="cov1" title="1">fn(td, doc)</span>
+                                }
+                        }
+                }
+                <span class="cov10" title="54">return true</span>
+        })
+}
+
+func (f *File) collectTypesOtherThanStruct() <span class="cov1" title="1">{
+        f.collectTypeSpecs(func(node *ast.TypeSpec, doc *ast.CommentGroup) </span><span class="cov1" title="1">{
+                namePtr := &amp;node.Name.Name
+                var t Node
+                switch x := getElem(node.Type).(type) </span>{
+                case *ast.SelectorExpr:<span class="cov0" title="0">
+                        t = f.newAliasType(namePtr, doc, node.Assign, x)</span>
+
+                case *ast.Ident:<span class="cov0" title="0">
+                        t = f.newBasicOrAliasType(namePtr, doc, node.Assign, x)</span>
+
+                case *ast.ChanType:<span class="cov0" title="0">
+                        t = f.newChanType(namePtr, doc, node.Assign, x)</span>
+
+                case *ast.ArrayType:<span class="cov0" title="0">
+                        t = f.newListType(namePtr, doc, node.Assign, x)</span>
+
+                case *ast.MapType:<span class="cov0" title="0">
+                        t = f.newMapType(namePtr, doc, node.Assign, x)</span>
+
+                case *ast.InterfaceType:<span class="cov0" title="0">
+                        t = f.newInterfaceType(namePtr, doc, node.Assign, x)</span>
+
+                default:<span class="cov1" title="1">
+                        return</span>
+                }
+                <span class="cov0" title="0">f.Nodes[t.Node().Pos()] = t</span>
+        })
+}
+
+// collectStructs collects and maps structType nodes to their positions
+func (f *File) collectStructs() <span class="cov1" title="1">{
+        collectStructs := func(n ast.Node) bool </span><span class="cov10" title="54">{
+                switch x := n.(type) </span>{
+                case *ast.CompositeLit:<span class="cov0" title="0">
+                        t, ok := x.Type.(*ast.StructType)
+                        if !ok </span><span class="cov0" title="0">{
+                                return true
+                        }</span>
+                        <span class="cov0" title="0">st := f.newStructType(nil, nil, -1, t)
+                        f.Nodes[st.Node().Pos()] = st</span>
+                case *ast.GenDecl:<span class="cov1" title="1">
+                        for _, spec := range x.Specs </span><span class="cov1" title="1">{
+                                var assign = token.NoPos
+                                var t ast.Expr
+                                var structName *string
+                                var doc = x.Doc
+                                switch y := spec.(type) </span>{
+                                case *ast.TypeSpec:<span class="cov1" title="1">
+                                        if y.Type == nil </span><span class="cov0" title="0">{
+                                                continue</span>
+                                        }
+                                        <span class="cov1" title="1">assign = y.Assign
+                                        structName = &amp;y.Name.Name
+                                        t = y.Type
+                                        if y.Doc != nil </span><span class="cov0" title="0">{
+                                                doc = y.Doc
+                                        }</span>
+                                case *ast.ValueSpec:<span class="cov0" title="0">
+                                        assign = -1
+                                        structName = &amp;y.Names[0].Name
+                                        t = y.Type
+                                        if y.Doc != nil </span><span class="cov0" title="0">{
+                                                doc = y.Doc
+                                        }</span>
+                                }
+                                <span class="cov1" title="1">z, ok := t.(*ast.StructType)
+                                if !ok </span><span class="cov0" title="0">{
+                                        continue</span>
+                                }
+                                <span class="cov1" title="1">st := f.newStructType(structName, doc, assign, z)
+                                f.Nodes[st.Node().Pos()] = st</span>
+                        }
+                }
+                <span class="cov10" title="54">return true</span>
+        }
+        <span class="cov1" title="1">ast.Inspect(f.File, collectStructs)</span>
+}
+
+func (f *File) setStructFields() <span class="cov1" title="1">{
+        for _, t := range f.Nodes </span><span class="cov1" title="1">{
+                s, ok := t.(*StructType)
+                if !ok </span><span class="cov0" title="0">{
+                        continue</span>
+                }
+                <span class="cov1" title="1">s.setFields()</span>
+        }
+}
+
+func (f *File) bindMethods() <span class="cov1" title="1">{
+        for _, m := range f.Nodes </span><span class="cov1" title="1">{
+                fb, ok := m.(FuncNode)
+                if !ok </span><span class="cov1" title="1">{
+                        continue</span>
+                }
+                <span class="cov0" title="0">recv, found := fb.Recv()
+                if !found </span><span class="cov0" title="0">{
+                        continue</span>
+                }
+                <span class="cov0" title="0">t, found := f.LookupTypeInPkg(recv.TypeName)
+                if !found </span><span class="cov0" title="0">{
+                        continue</span>
+                }
+                <span class="cov0" title="0">t.addMethod(fb)
+                break</span>
+        }
+}
+
+func expandFields(fieldList *ast.FieldList) <span class="cov1" title="1">{
+        if fieldList == nil </span><span class="cov0" title="0">{
+                return
+        }</span>
+        <span class="cov1" title="1">var list = make([]*ast.Field, 0, fieldList.NumFields())
+        for _, field := range fieldList.List </span><span class="cov3" title="3">{
+                list = append(list, field)
+                if len(field.Names) &gt; 1 </span><span class="cov1" title="1">{
+                        for _, name := range field.Names[1:] </span><span class="cov2" title="2">{
+                                list = append(list, &amp;ast.Field{
+                                        Names: []*ast.Ident{cloneIdent(name)},
+                                        Type:  field.Type,
+                                        Tag:   cloneBasicLit(field.Tag),
+                                })
+                        }</span>
+                        <span class="cov1" title="1">field.Names = field.Names[:1]</span>
+                }
+        }
+        <span class="cov1" title="1">fieldList.List = list</span>
+}
+
+func (f *File) expandFuncFields(fieldList *ast.FieldList) (fields []*FuncField) <span class="cov0" title="0">{
+        if fieldList != nil </span><span class="cov0" title="0">{
+                for _, g := range fieldList.List </span><span class="cov0" title="0">{
+                        typeName := f.TryFormatNode(g.Type)
+                        m := len(g.Names)
+                        if m == 0 </span><span class="cov0" title="0">{
+                                fields = append(fields, &amp;FuncField{
+                                        TypeName: typeName,
+                                })
+                        }</span> else<span class="cov0" title="0"> {
+                                for _, name := range g.Names </span><span class="cov0" title="0">{
+                                        fields = append(fields, &amp;FuncField{
+                                                Name:     name.Name,
+                                                TypeName: typeName,
+                                        })
+                                }</span>
+                        }
+                }
+        }
+        <span class="cov0" title="0">return</span>
+}
+
+func getElem(e ast.Expr) ast.Expr <span class="cov1" title="1">{
+        for </span><span class="cov1" title="1">{
+                s, ok := e.(*ast.StarExpr)
+                if ok </span><span class="cov0" title="0">{
+                        e = s.X
+                }</span> else<span class="cov1" title="1"> {
+                        return e
+                }</span>
+        }
+}
+
+func cloneIdent(i *ast.Ident) *ast.Ident <span class="cov2" title="2">{
+        return &amp;ast.Ident{
+                Name: i.Name,
+                Obj:  i.Obj,
+        }
+}</span>
+
+func cloneBasicLit(b *ast.BasicLit) *ast.BasicLit <span class="cov2" title="2">{
+        if b == nil </span><span class="cov2" title="2">{
+                return nil
+        }</span>
+        <span class="cov0" title="0">return &amp;ast.BasicLit{
+                Kind:  b.Kind,
+                Value: b.Value,
+        }</span>
+}
+
+// func cloneCommentGroup(c *ast.CommentGroup) *ast.CommentGroup {
+//         if c == nil {
+//                 return nil
+//         }
+//         n := new(ast.CommentGroup)
+//         for _, v := range c.List {
+//                 n.List = append(n.List, &amp;ast.Comment{
+//                         Text: v.Text,
+//                 })
+//         }
+//         return n
+// }
+</pre>
+		
+		<pre class="file" id="file3" style="display: none">// Copyright 2018 henrylee2cn. All Rights Reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+package aster
+
+import (
+        "go/ast"
+)
+
+// FuncDecl function Declaration
+type FuncDecl struct {
+        *super
+        *ast.FuncLit
+        recv    *FuncField
+        params  []*FuncField
+        results []*FuncField
+}
+
+var _ Node = (*FuncDecl)(nil)
+var _ FuncNode = (*FuncDecl)(nil)
+
+func (f *File) newFuncNode(namePtr *string, doc *ast.CommentGroup,
+        node *ast.FuncLit, recv *FuncField, params, results []*FuncField) *FuncDecl <span class="cov0" title="0">{
+        ft := &amp;FuncDecl{
+                super:   f.newSuper(namePtr, Func, doc),
+                FuncLit: node,
+                recv:    recv,
+                params:  params,
+                results: results,
+        }
+        return ft
+}</span>
+
+func (f *FuncDecl) funcNodeIdentify() {<span class="cov0" title="0">}</span>
+
+// Node returns origin AST node.
+func (f *FuncDecl) Node() ast.Node <span class="cov0" title="0">{
+        return f.FuncLit
+}</span>
+
+// NumParam returns a function type's input parameter count.
+func (f *FuncDecl) NumParam() int <span class="cov0" title="0">{
+        return len(f.params)
+}</span>
+
+// NumResult returns a function type's output parameter count.
+func (f *FuncDecl) NumResult() int <span class="cov0" title="0">{
+        return len(f.results)
+}</span>
+
+// Param returns the type of a function type's i'th input parameter.
+func (f *FuncDecl) Param(i int) (ff *FuncField, found bool) <span class="cov0" title="0">{
+        if i &lt; 0 || i &gt;= len(f.params) </span><span class="cov0" title="0">{
+                return
+        }</span>
+        <span class="cov0" title="0">return f.params[i], true</span>
+}
+
+// Result returns the type of a function type's i'th output parameter.
+func (f *FuncDecl) Result(i int) (ff *FuncField, found bool) <span class="cov0" title="0">{
+        if i &lt; 0 || i &gt;= len(f.results) </span><span class="cov0" title="0">{
+                return
+        }</span>
+        <span class="cov0" title="0">return f.results[i], true</span>
+}
+
+// IsVariadic reports whether a function type's final input parameter
+// is a "..." parameter. If so, t.In(t.NumIn() - 1) returns the parameter's
+// implicit actual type []T.
+//
+// For concreteness, if t represents func(x int, y ... float64), then
+//
+//        f.NumParam() == 2
+//        f.Param(0) is the Type for "int"
+//        f.Param(1) is the Type for "[]float64"
+//        f.IsVariadic() == true
+//
+func (f *FuncDecl) IsVariadic() bool <span class="cov0" title="0">{
+        return isVariadic(f.FuncLit.Type)
+}</span>
+
+// Recv returns receiver (methods); or returns false (functions)
+func (f *FuncDecl) Recv() (*FuncField, bool) <span class="cov0" title="0">{
+        return f.recv, f.recv != nil
+}</span>
+</pre>
+		
+		<pre class="file" id="file4" style="display: none">// Copyright 2018 henrylee2cn. All Rights Reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+package aster
+
+import (
+        "fmt"
+        "go/ast"
+        "go/token"
+        "sort"
+        "strconv"
+        "strings"
+
+        "github.com/henrylee2cn/structtag"
+)
+
+type superType struct {
+        *super
+        isAssign bool // is there `=` for declared type?
+        methods  []FuncNode
+}
+
+func (f *File) newSuperType(namePtr *string, kind Kind, doc *ast.CommentGroup,
+        isAssign bool) *superType <span class="cov1" title="1">{
+        return &amp;superType{
+                super:    f.newSuper(namePtr, kind, doc),
+                isAssign: isAssign,
+        }
+}</span>
+
+func (s *superType) typeNodeIdentify() {<span class="cov0" title="0">}</span>
+
+// IsAssign is there `=` for declared type?
+func (s *superType) IsAssign() bool <span class="cov0" title="0">{
+        return s.isAssign
+}</span>
+
+// Method returns the i'th method in the type's method set.
+// It panics if i is not in the range [0, NumMethod()).
+//
+// For a non-interface type T or *T, the returned Method's Type and Func
+// fields describe a function whose first argument is the receiver.
+//
+// For an interface type, the returned Method's Type field gives the
+// method signature, without a receiver, and the Func field is nil.
+func (s *superType) Method(i int) (FuncNode, bool) <span class="cov0" title="0">{
+        if i &lt; 0 || i &gt;= len(s.methods) </span><span class="cov0" title="0">{
+                return nil, false
+        }</span>
+        <span class="cov0" title="0">return s.methods[i], true</span>
+}
+
+// MethodByName returns the method with that name in the type's
+// method set and a boolean indicating if the method was found.
+//
+// For a non-interface type T or *T, the returned Method's Type and Func
+// fields describe a function whose first argument is the receiver.
+//
+// For an interface type, the returned Method's Type field gives the
+// method signature, without a receiver, and the Func field is nil.
+func (s *superType) MethodByName(name string) (FuncNode, bool) <span class="cov0" title="0">{
+        for _, m := range s.methods </span><span class="cov0" title="0">{
+                if m.Name() == name </span><span class="cov0" title="0">{
+                        return m, true
+                }</span>
+        }
+        <span class="cov0" title="0">return nil, false</span>
+}
+
+// NumMethod returns the number of exported methods in the type's method set.
+func (s *superType) NumMethod() int <span class="cov0" title="0">{
+        return len(s.methods)
+}</span>
+
+// Implements reports whether the type implements the interface type u.
+func (s *superType) Implements(u TypeNode) bool <span class="cov0" title="0">{
+        for i := u.NumMethod() - 1; i &gt;= 0; i-- </span><span class="cov0" title="0">{
+                um, _ := u.Method(i)
+                cm, ok := s.MethodByName(um.Name())
+                if !ok ||
+                        um.IsVariadic() != cm.IsVariadic() ||
+                        um.NumParam() != cm.NumParam() ||
+                        um.NumResult() != cm.NumResult() </span><span class="cov0" title="0">{
+                        return false
+                }</span>
+                <span class="cov0" title="0">for j := um.NumParam(); j &gt;= 0; j-- </span><span class="cov0" title="0">{
+                        uf, _ := um.Param(j)
+                        cf, _ := cm.Param(j)
+                        if uf.TypeName != cf.TypeName </span><span class="cov0" title="0">{
+                                return false
+                        }</span>
+                }
+                <span class="cov0" title="0">for j := um.NumResult(); j &gt;= 0; j-- </span><span class="cov0" title="0">{
+                        uf, _ := um.Result(j)
+                        cf, _ := cm.Result(j)
+                        if uf.TypeName != cf.TypeName </span><span class="cov0" title="0">{
+                                return false
+                        }</span>
+                }
+        }
+        <span class="cov0" title="0">return true</span>
+}
+
+func (s *superType) addMethod(method FuncNode) error <span class="cov0" title="0">{
+        field, ok := method.Recv()
+        if !ok </span><span class="cov0" title="0">{
+                return fmt.Errorf("not method: %s", method.Name())
+        }</span>
+        <span class="cov0" title="0">if field.TypeName != s.Name() </span><span class="cov0" title="0">{
+                return fmt.Errorf("reveiver do not match method: %s, want: %s, got: %s",
+                        method.Name(), s.Name(), field.TypeName)
+        }</span>
+        <span class="cov0" title="0">s.methods = append(s.methods, method)
+        return nil</span>
+}
+
+// AliasType represents a alias type
+type AliasType struct {
+        *superType
+        ast.Expr // type node
+}
+
+var _ Node = (*AliasType)(nil)
+var _ TypeNode = (*AliasType)(nil)
+
+func (f *File) newAliasType(namePtr *string, doc *ast.CommentGroup, assign token.Pos,
+        typ ast.Expr) *BasicType <span class="cov0" title="0">{
+        return &amp;BasicType{
+                superType: f.newSuperType(namePtr, Suspense, doc, assign != token.NoPos),
+                Expr:      typ,
+        }
+}</span>
+
+// Node returns origin AST node.
+func (a *AliasType) Node() ast.Node <span class="cov0" title="0">{
+        return a.Expr
+}</span>
+
+// BasicType represents a basic type
+type BasicType struct {
+        *superType
+        ast.Expr
+}
+
+var _ Node = (*BasicType)(nil)
+var _ TypeNode = (*BasicType)(nil)
+
+func (f *File) newBasicType(namePtr *string, doc *ast.CommentGroup, assign token.Pos,
+        typ ast.Expr) (*BasicType, bool) <span class="cov0" title="0">{
+        basicName := strings.TrimLeft(f.TryFormatNode(typ), "*")
+        kind, found := getBasicKind(basicName)
+        if !found </span><span class="cov0" title="0">{
+                return nil, false
+        }</span>
+        <span class="cov0" title="0">return &amp;BasicType{
+                superType: f.newSuperType(namePtr, kind, doc, assign != token.NoPos),
+                Expr:      typ,
+        }, true</span>
+}
+
+func (f *File) newBasicOrAliasType(namePtr *string, doc *ast.CommentGroup, assign token.Pos,
+        typ ast.Expr) Node <span class="cov0" title="0">{
+        t, ok := f.newBasicType(namePtr, doc, assign, typ)
+        if ok </span><span class="cov0" title="0">{
+                return t
+        }</span>
+        <span class="cov0" title="0">return f.newAliasType(namePtr, doc, assign, typ)</span>
+}
+
+// Node returns origin AST node.
+func (b *BasicType) Node() ast.Node <span class="cov0" title="0">{
+        return b.Expr
+}</span>
+
+// ListType represents an array or slice type.
+type ListType struct {
+        *superType
+        *ast.ArrayType
+}
+
+var _ Node = (*ListType)(nil)
+var _ TypeNode = (*ListType)(nil)
+
+func (f *File) newListType(namePtr *string, doc *ast.CommentGroup, assign token.Pos,
+        typ *ast.ArrayType) *ListType <span class="cov0" title="0">{
+        kind := Slice
+        if typ.Len != nil </span><span class="cov0" title="0">{
+                kind = Array
+        }</span>
+        <span class="cov0" title="0">return &amp;ListType{
+                superType: f.newSuperType(namePtr, kind, doc, assign != token.NoPos),
+                ArrayType: typ,
+        }</span>
+}
+
+// Node returns origin AST node.
+func (l *ListType) Node() ast.Node <span class="cov0" title="0">{
+        return l.ArrayType
+}</span>
+
+// Len returns list's length if it is array type,
+// otherwise returns false.
+func (l *ListType) Len() (int, bool) <span class="cov0" title="0">{
+        if l.Kind() == Slice </span><span class="cov0" title="0">{
+                return -1, false
+        }</span>
+        <span class="cov0" title="0">cnt, _ := strconv.Atoi(l.ArrayType.Len.(*ast.BasicLit).Value)
+        return cnt, true</span>
+}
+
+// MapType represents a map type.
+type MapType struct {
+        *superType
+        *ast.MapType
+}
+
+var _ Node = (*MapType)(nil)
+var _ TypeNode = (*MapType)(nil)
+
+func (f *File) newMapType(namePtr *string, doc *ast.CommentGroup, assign token.Pos,
+        typ *ast.MapType) *MapType <span class="cov0" title="0">{
+        return &amp;MapType{
+                superType: f.newSuperType(namePtr, Map, doc, assign != token.NoPos),
+                MapType:   typ,
+        }
+}</span>
+
+// Node returns origin AST node.
+func (m *MapType) Node() ast.Node <span class="cov0" title="0">{
+        return m.MapType
+}</span>
+
+// ChanType represents a channel type.
+type ChanType struct {
+        *superType
+        *ast.ChanType
+}
+
+var _ Node = (*ChanType)(nil)
+var _ TypeNode = (*ChanType)(nil)
+
+func (f *File) newChanType(namePtr *string, doc *ast.CommentGroup, assign token.Pos,
+        typ *ast.ChanType) *ChanType <span class="cov0" title="0">{
+        return &amp;ChanType{
+                superType: f.newSuperType(namePtr, Chan, doc, assign != token.NoPos),
+                ChanType:  typ,
+        }
+}</span>
+
+// Node returns origin AST node.
+func (c *ChanType) Node() ast.Node <span class="cov0" title="0">{
+        return c.ChanType
+}</span>
+
+// Dir returns a channel type's direction.
+func (c *ChanType) Dir() ast.ChanDir <span class="cov0" title="0">{
+        return c.ChanType.Dir
+}</span>
+
+// InterfaceType represents a interface type.
+type InterfaceType struct {
+        *superType
+        *ast.InterfaceType
+}
+
+var _ Node = (*InterfaceType)(nil)
+var _ TypeNode = (*InterfaceType)(nil)
+
+func (f *File) newInterfaceType(namePtr *string, doc *ast.CommentGroup, assign token.Pos,
+        typ *ast.InterfaceType) *InterfaceType <span class="cov0" title="0">{
+        return &amp;InterfaceType{
+                superType:     f.newSuperType(namePtr, Interface, doc, assign != token.NoPos),
+                InterfaceType: typ,
+        }
+}</span>
+
+// Node returns origin AST node.
+func (i *InterfaceType) Node() ast.Node <span class="cov0" title="0">{
+        return i.InterfaceType
+}</span>
+
+// StructType represents a struct type.
+type StructType struct {
+        *superType
+        *ast.StructType
+        fields []*StructField // sorted by offset
+}
+
+var _ Node = (*StructType)(nil)
+var _ TypeNode = (*StructType)(nil)
+
+func (f *File) newStructType(namePtr *string, doc *ast.CommentGroup, assign token.Pos,
+        typ *ast.StructType) *StructType <span class="cov1" title="1">{
+        return &amp;StructType{
+                superType:  f.newSuperType(namePtr, Struct, doc, assign != token.NoPos),
+                StructType: typ,
+        }
+}</span>
+
+// Node returns origin AST node.
+func (s *StructType) Node() ast.Node <span class="cov3" title="2">{
+        return s.StructType
+}</span>
+
+// NumField returns a struct type's field count.
+func (s *StructType) NumField() int <span class="cov0" title="0">{
+        return len(s.fields)
+}</span>
+
+// Field returns a struct type's i'th field.
+// It panics if the type's Kind is not Struct.
+// It panics if i is not in the range [0, NumField()).
+func (s *StructType) Field(i int) (field *StructField) <span class="cov0" title="0">{
+        if i &lt; 0 || i &gt;= len(s.fields) </span><span class="cov0" title="0">{
+                panic("aster: Field index out of bounds")</span>
+        }
+        <span class="cov0" title="0">return s.fields[i]</span>
+}
+
+// FieldByName returns the struct field with the given name
+// and a boolean indicating if the field was found.
+func (s *StructType) FieldByName(name string) (field *StructField, found bool) <span class="cov6" title="4">{
+        for _, field := range s.fields </span><span class="cov10" title="12">{
+                if field.Name() == name </span><span class="cov6" title="4">{
+                        return field, true
+                }</span>
+        }
+        <span class="cov0" title="0">return nil, false</span>
+}
+
+// A StructField describes a single field in a struct.
+type StructField struct {
+        *ast.Field
+        Tags *StructTag // field tags handler
+}
+
+func (s *StructType) setFields() <span class="cov1" title="1">{
+        expandFields(s.StructType.Fields)
+        for _, field := range s.StructType.Fields.List </span><span class="cov6" title="5">{
+                s.fields = append(s.fields, &amp;StructField{
+                        Field: field,
+                        Tags:  newStructTag(field),
+                })
+        }</span>
+}
+
+// Name returns field name
+func (s *StructField) Name() string <span class="cov10" title="12">{
+        if !s.Anonymous() </span><span class="cov10" title="12">{
+                return s.Field.Names[0].Name
+        }</span>
+        <span class="cov0" title="0">ident, _ := getElem(s.Field.Type).(*ast.Ident)
+        if ident == nil </span><span class="cov0" title="0">{
+                return ""
+        }</span>
+        <span class="cov0" title="0">return ident.Name</span>
+}
+
+// Doc returns lead comment.
+func (s *StructField) Doc() string <span class="cov0" title="0">{
+        if s.Field.Doc == nil </span><span class="cov0" title="0">{
+                return ""
+        }</span>
+        <span class="cov0" title="0">return s.Field.Doc.Text()</span>
+}
+
+// Comment returns line comment.
+func (s *StructField) Comment() string <span class="cov0" title="0">{
+        if s.Field.Comment == nil </span><span class="cov0" title="0">{
+                return ""
+        }</span>
+        <span class="cov0" title="0">return s.Field.Comment.Text()</span>
+}
+
+// Anonymous returns whether the field is an anonymous field.
+func (s *StructField) Anonymous() bool <span class="cov10" title="12">{
+        return len(s.Field.Names) == 0
+}</span>
+
+// A StructTag is the tag string in a struct field.
+//
+// By convention, tag strings are a concatenation of
+// optionally space-separated key:"value" pairs.
+// Each key is a non-empty string consisting of non-control
+// characters other than space (U+0020 ' '), quote (U+0022 '"'),
+// and colon (U+003A ':').  Each value is quoted using U+0022 '"'
+// characters and Go string literal syntax.
+type StructTag struct {
+        field *ast.Field
+        tags  *structtag.Tags
+}
+
+func newStructTag(field *ast.Field) *StructTag <span class="cov6" title="5">{
+        tags := &amp;StructTag{
+                field: field,
+        }
+        tags.reparse()
+        return tags
+}</span>
+
+func (s *StructTag) reparse() (err error) <span class="cov6" title="5">{
+        var value string
+        if s.field.Tag != nil </span><span class="cov1" title="1">{
+                value = strings.Trim(s.field.Tag.Value, "`")
+        }</span>
+        <span class="cov6" title="5">s.tags, err = structtag.Parse(value)
+        if err != nil </span><span class="cov0" title="0">{
+                s.tags, _ = structtag.Parse("")
+        }</span>
+        <span class="cov6" title="5">return err</span>
+}
+
+func (s *StructTag) resetValue() <span class="cov6" title="4">{
+        sort.Sort(s.tags)
+        value := s.tags.String()
+        if value == "" </span><span class="cov0" title="0">{
+                s.field.Tag = nil
+        }</span> else<span class="cov6" title="4"> {
+                if s.field.Tag == nil </span><span class="cov4" title="3">{
+                        s.field.Tag = &amp;ast.BasicLit{}
+                }</span>
+                <span class="cov6" title="4">s.field.Tag.Value = "`" + value + "`"</span>
+        }
+}
+
+// Tag defines a single struct's string literal tag
+//
+// type Tag struct {
+// Key is the tag key, such as json, xml, etc..
+// i.e: `json:"foo,omitempty". Here key is: "json"
+// Key string
+//
+// Name is a part of the value
+// i.e: `json:"foo,omitempty". Here name is: "foo"
+// Name string
+//
+// Options is a part of the value. It contains a slice of tag options i.e:
+// `json:"foo,omitempty". Here options is: ["omitempty"]
+// Options []string
+// }
+//
+type Tag = structtag.Tag
+
+// Tags returns a slice of tags. The order is the original tag order unless it
+// was changed.
+func (s *StructTag) Tags() []*Tag <span class="cov0" title="0">{
+        return s.tags.Tags()
+}</span>
+
+// AddOptions adds the given option for the given key. If the option already
+// exists it doesn't add it again.
+func (s *StructTag) AddOptions(key string, options ...string) <span class="cov1" title="1">{
+        s.tags.AddOptions(key, options...)
+        s.resetValue()
+}</span>
+
+// Delete deletes the tag for the given keys
+func (s *StructTag) Delete(keys ...string) <span class="cov0" title="0">{
+        s.tags.Delete(keys...)
+        s.resetValue()
+}</span>
+
+// DeleteOptions deletes the given options for the given key
+func (s *StructTag) DeleteOptions(key string, options ...string) <span class="cov0" title="0">{
+        s.tags.DeleteOptions(key, options...)
+        s.resetValue()
+}</span>
+
+// Get returns the tag associated with the given key. If the key is present
+// in the tag the value (which may be empty) is returned. Otherwise the
+// returned value will be the empty string. The ok return value reports whether
+// the tag exists or not (which the return value is nil).
+func (s *StructTag) Get(key string) (*Tag, error) <span class="cov0" title="0">{
+        return s.tags.Get(key)
+}</span>
+
+// Keys returns a slice of tag keys. The order is the original tag order unless it
+// was changed.
+func (s *StructTag) Keys() []string <span class="cov0" title="0">{
+        return s.tags.Keys()
+}</span>
+
+// Set sets the given tag. If the tag key already exists it'll override it
+func (s *StructTag) Set(tag *Tag) error <span class="cov4" title="3">{
+        err := s.tags.Set(tag)
+        if err == nil </span><span class="cov4" title="3">{
+                s.resetValue()
+        }</span>
+        <span class="cov4" title="3">return err</span>
+}
+
+// String reassembles the tags into a valid literal tag field representation
+func (s *StructTag) String() string <span class="cov0" title="0">{
+        return s.tags.String()
+}</span>
+</pre>
+		
+		<pre class="file" id="file5" style="display: none">// Copyright 2018 henrylee2cn. All Rights Reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+package aster
+
+import (
+        "bytes"
+        "errors"
+        "go/ast"
+        "go/parser"
+        "go/token"
+        "io"
+        "io/ioutil"
+        "os"
+        "strings"
+)
+
+// ParseDir calls ParseFile for all files with names ending in ".go" in the
+// directory specified by path and returns a map of package name -&gt; package
+// AST with all the packages found.
+//
+// If filter != nil, only the files with os.FileInfo entries passing through
+// the filter (and ending in ".go") are considered. The mode bits are passed
+// to ParseFile unchanged. Position information is recorded in fset, which
+// must not be nil.
+//
+// If the directory couldn't be read, a nil map and the respective error are
+// returned. If a parse error occurred, a non-nil but incomplete map and the
+// first error encountered are returned.
+//
+func ParseDir(dir string, filter func(os.FileInfo) bool, mode ...parser.Mode) (module *Module, first error) <span class="cov0" title="0">{
+        module = &amp;Module{
+                FileSet: token.NewFileSet(),
+                Dir:     dir,
+                filter:  filter,
+                mode:    parser.ParseComments,
+        }
+        for _, m := range mode </span><span class="cov0" title="0">{
+                module.mode |= m
+        }</span>
+        <span class="cov0" title="0">first = module.Reparse()
+        return</span>
+}
+
+// Reparse reparses AST.
+func (m *Module) Reparse() (first error) <span class="cov0" title="0">{
+        pkgs, first := parser.ParseDir(m.FileSet, m.Dir, m.filter, m.mode)
+        if first != nil </span><span class="cov0" title="0">{
+                return
+        }</span>
+        <span class="cov0" title="0">m.Packages = make(map[string]*Package, len(pkgs))
+        for k, v := range pkgs </span><span class="cov0" title="0">{
+                m.Packages[k] = convertPackage(m, k, v)
+        }</span>
+        <span class="cov0" title="0">return</span>
+}
+
+// ParseFile parses the source code of a single Go source file and returns
+// the corresponding ast.File node. The source code may be provided via
+// the filename of the source file, or via the src parameter.
+//
+// If src != nil, ParseFile parses the source from src and the filename is
+// only used when recording position information. The type of the argument
+// for the src parameter must be string, []byte, or io.Reader.
+// If src == nil, ParseFile parses the file specified by filename.
+//
+// The mode parameter controls the amount of source text parsed and other
+// optional parser functionality. Position information is recorded in the
+// file set fset, which must not be nil.
+//
+// If the source couldn't be read, the returned AST is nil and the error
+// indicates the specific failure. If the source was read but syntax
+// errors were found, the result is a partial AST (with ast.Bad* nodes
+// representing the fragments of erroneous source code). Multiple errors
+// are returned via a scanner.ErrorList which is sorted by file position.
+//
+func ParseFile(filename string, src interface{}, mode ...parser.Mode) (f *File, err error) <span class="cov1" title="1">{
+        b, err := readSource(filename, src)
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, err
+        }</span>
+        <span class="cov1" title="1">f = &amp;File{
+                FileSet:  token.NewFileSet(),
+                Filename: filename,
+                Src:      b,
+                mode:     parser.ParseComments,
+        }
+        for _, m := range mode </span><span class="cov0" title="0">{
+                f.mode |= m
+        }</span>
+        <span class="cov1" title="1">err = f.Reparse()
+        return</span>
+}
+
+// Reparse reparses AST.
+func (f *File) Reparse() (err error) <span class="cov1" title="1">{
+        b, err := readSource(f.Filename, f.Src)
+        if err != nil </span><span class="cov0" title="0">{
+                return err
+        }</span>
+        <span class="cov1" title="1">f.Src = b
+        file, err := parser.ParseFile(f.FileSet, f.Filename, b, f.mode)
+        if err != nil </span><span class="cov0" title="0">{
+                return
+        }</span>
+        <span class="cov1" title="1">f.File = file
+        if file.Name != nil </span><span class="cov1" title="1">{
+                f.PkgName = file.Name.Name
+        }</span>
+        <span class="cov1" title="1">f.setImports()
+        f.collectNodes(true)
+        return</span>
+}
+
+func (f *File) setImports() <span class="cov1" title="1">{
+        for _, v := range f.File.Imports </span><span class="cov0" title="0">{
+                imp := &amp;Import{
+                        ImportSpec: v,
+                        Path:       v.Path.Value[1 : len(v.Path.Value)-1],
+                        Doc:        v.Doc,
+                }
+                if v.Name != nil </span><span class="cov0" title="0">{
+                        imp.Name = v.Name.Name
+                }</span> else<span class="cov0" title="0"> {
+                        imp.Name = imp.Path[strings.LastIndex(imp.Path, "/")+1:]
+                }</span>
+                <span class="cov0" title="0">f.Imports = append(f.Imports, imp)</span>
+        }
+}
+
+func convertPackage(mod *Module, dir string, pkg *ast.Package) *Package <span class="cov0" title="0">{
+        p := &amp;Package{
+                FileSet: mod.FileSet,
+                Dir:     dir,
+                Name:    pkg.Name,
+                Scope:   pkg.Scope,
+                Imports: pkg.Imports,
+                mode:    mod.mode,
+                module:  mod,
+        }
+        p.Files = make(map[string]*File, len(pkg.Files))
+        for k, v := range pkg.Files </span><span class="cov0" title="0">{
+                p.Files[k] = convertFile(p, k, v)
+        }</span>
+        <span class="cov0" title="0">p.collectNodes()
+        return p</span>
+}
+
+func convertFile(pkg *Package, filename string, file *ast.File) *File <span class="cov0" title="0">{
+        b, _ := readSource(filename, nil)
+        f := &amp;File{
+                FileSet:  pkg.FileSet,
+                Filename: filename,
+                PkgName:  pkg.Name,
+                Src:      b,
+                File:     file,
+                mode:     pkg.mode,
+                pkg:      pkg,
+        }
+        f.setImports()
+        return f
+}</span>
+
+func readSource(filename string, src interface{}) ([]byte, error) <span class="cov10" title="2">{
+        if src != nil </span><span class="cov10" title="2">{
+                switch s := src.(type) </span>{
+                case string:<span class="cov0" title="0">
+                        return []byte(s), nil</span>
+                case []byte:<span class="cov10" title="2">
+                        return s, nil</span>
+                case *bytes.Buffer:<span class="cov0" title="0">
+                        // is io.Reader, but src is already available in []byte form
+                        if s != nil </span><span class="cov0" title="0">{
+                                return s.Bytes(), nil
+                        }</span>
+                case io.Reader:<span class="cov0" title="0">
+                        return ioutil.ReadAll(s)</span>
+                }
+                <span class="cov0" title="0">return nil, errors.New("invalid source")</span>
+        }
+        <span class="cov0" title="0">return ioutil.ReadFile(filename)</span>
+}
+
+func isVariadic(t *ast.FuncType) bool <span class="cov0" title="0">{
+        params := t.Params
+        if num := len(params.List); num &gt; 0 </span><span class="cov0" title="0">{
+                _, ok := params.List[num-1].Type.(*ast.Ellipsis)
+                if ok </span><span class="cov0" title="0">{
+                        return true
+                }</span>
+        }
+        <span class="cov0" title="0">return false</span>
+}
+
+// IsExported reports whether name is an exported Go symbol
+// (that is, whether it begins with an upper-case letter).
+//
+func IsExported(name string) bool <span class="cov0" title="0">{
+        return ast.IsExported(name)
+}</span>
+</pre>
+		
+		</div>
+	</body>
+	<script>
+	(function() {
+		var files = document.getElementById('files');
+		var visible;
+		files.addEventListener('change', onChange, false);
+		function select(part) {
+			if (visible)
+				visible.style.display = 'none';
+			visible = document.getElementById(part);
+			if (!visible)
+				return;
+			files.value = part;
+			visible.style.display = 'block';
+			location.hash = part;
+		}
+		function onChange() {
+			select(files.value);
+			window.scrollTo(0, 0);
+		}
+		if (location.hash != "") {
+			select(location.hash.substr(1));
+		}
+		if (!visible) {
+			select("file0");
+		}
+	})();
+	</script>
+</html>
