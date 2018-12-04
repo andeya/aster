@@ -17,15 +17,9 @@ Under development, not for production...
 - Easily fetch and modify syntax node information
 - ...
 
-## Test Environment
+## Go Version
 
-- os:
-  - linux
-  - osx
-  - windows
-
-- go:
-  - 1.11
+- go1.11
 
 ## An Example
 
