@@ -31,11 +31,10 @@ func (m *Module) Inspect(fn func(Node) bool) {
 func (m *Module) Fetch(fn func(Node) bool) (nodes []Node) {
 	for _, p := range m.Packages {
 		p.Inspect(func(n Node) bool {
-			next := fn(n)
-			if next {
+			if fn(n) {
 				nodes = append(nodes, n)
 			}
-			return next
+			return true
 		})
 	}
 	return nodes
@@ -56,18 +55,17 @@ func (p *Package) Inspect(fn func(Node) bool) {
 // Fetch traversing through the current package, fetches node if fn returns true.
 func (p *Package) Fetch(fn func(Node) bool) (nodes []Node) {
 	p.Inspect(func(n Node) bool {
-		next := fn(n)
-		if next {
+		if fn(n) {
 			nodes = append(nodes, n)
 		}
-		return next
+		return false
 	})
 	return nodes
 }
 
-// LookupType lookups TypeNode by type name in current package.
+// LookupType lookups TypeNode by type name in the current package.
 func (p *Package) LookupType(name string) (t TypeNode, found bool) {
-	fn, ok := createTypeNodeByNameInPkg(name)
+	fn, ok := typeNodeFuncByNameInPkg(name)
 	if !ok {
 		return
 	}
@@ -76,6 +74,23 @@ func (p *Package) LookupType(name string) (t TypeNode, found bool) {
 		nodes = v.Fetch(fn)
 		if len(nodes) > 0 {
 			return nodes[0].(TypeNode), true
+		}
+	}
+	return
+}
+
+// LookupPureFunc lookups FuncNode by name in the current package.
+// NOTE: lookup FuncNode, but not method function.
+func (p *Package) LookupPureFunc(name string) (f FuncNode, found bool) {
+	fn, ok := pureFuncNodeFuncByNameInPkg(name)
+	if !ok {
+		return
+	}
+	var nodes []Node
+	for _, v := range p.Files {
+		nodes = v.Fetch(fn)
+		if len(nodes) > 0 {
+			return nodes[0].(FuncNode), true
 		}
 	}
 	return
@@ -98,11 +113,10 @@ func (f *File) Inspect(fn func(Node) bool) {
 // Fetch traversing through the current file, fetches node if fn returns true.
 func (f *File) Fetch(fn func(Node) bool) (nodes []Node) {
 	f.Inspect(func(n Node) bool {
-		next := fn(n)
-		if next {
+		if fn(n) {
 			nodes = append(nodes, n)
 		}
-		return next
+		return true
 	})
 	return nodes
 }
@@ -138,7 +152,20 @@ func (f *File) LookupPackages(currPkgName string) (pkgs []*Package, found bool) 
 	return
 }
 
-// LookupTypeInPkg lookups TypeNode by type name in current package.
+// LookupType lookups TypeNode by type name in the current file.
+func (f *File) LookupType(name string) (t TypeNode, found bool) {
+	fn, ok := typeNodeFuncByNameInPkg(name)
+	if !ok {
+		return
+	}
+	nodes := f.Fetch(fn)
+	if len(nodes) > 0 {
+		return nodes[0].(TypeNode), true
+	}
+	return
+}
+
+// LookupTypeInPkg lookups TypeNode by type name in the current package.
 func (f *File) LookupTypeInPkg(name string) (t TypeNode, found bool) {
 	p, ok := f.Package()
 	if ok {
@@ -147,7 +174,7 @@ func (f *File) LookupTypeInPkg(name string) (t TypeNode, found bool) {
 	return f.LookupType(name)
 }
 
-// LookupTypeInMod lookup Type by type name in current module.
+// LookupTypeInMod lookup Type by type name in the current module.
 func (f *File) LookupTypeInMod(name string) (t TypeNode, found bool) {
 	p, ok := f.Package()
 	if ok {
@@ -177,27 +204,59 @@ func (f *File) LookupTypeInMod(name string) (t TypeNode, found bool) {
 	return
 }
 
-// LookupType lookups TypeNode by type name in current file.
-func (f *File) LookupType(name string) (t TypeNode, found bool) {
-	fn, ok := createTypeNodeByNameInPkg(name)
+// LookupPureFunc lookups FuncNode by name in the current file.
+// NOTE: lookup FuncNode, but not method function.
+func (f *File) LookupPureFunc(name string) (pf FuncNode, found bool) {
+	fn, ok := pureFuncNodeFuncByNameInPkg(name)
 	if !ok {
 		return
 	}
 	nodes := f.Fetch(fn)
 	if len(nodes) > 0 {
-		return nodes[0].(TypeNode), true
+		return nodes[0].(FuncNode), true
 	}
 	return
 }
 
-func createTypeNodeByNameInPkg(name string) (func(Node) bool, bool) {
-	if strings.Contains(name, ".") {
-		return nil, false
+// LookupPureFuncInPkg lookups FuncNode by name in the current package.
+// NOTE: lookup FuncNode, but not method function.
+func (f *File) LookupPureFuncInPkg(name string) (pf FuncNode, found bool) {
+	p, ok := f.Package()
+	if ok {
+		return p.LookupPureFunc(name)
+	}
+	return f.LookupPureFunc(name)
+}
+
+// LookupPureFuncInMod lookup FuncNode by name in the current module.
+// NOTE: lookup FuncNode, but not method function.
+func (f *File) LookupPureFuncInMod(name string) (pf FuncNode, found bool) {
+	p, ok := f.Package()
+	if ok {
+		pf, found = p.LookupPureFunc(name)
+	} else {
+		pf, found = f.LookupPureFunc(name)
+	}
+	if found {
+		return
 	}
 	name = strings.TrimLeft(name, "*")
-	return func(b Node) bool {
-		return IsTypeNode(b) && b.Name() == name
-	}, true
+	// May be in the other module packages?
+	a := strings.SplitN(name, ".", 2)
+	if len(a) == 1 {
+		a = []string{".", name}
+	}
+	pkgs, ok := f.LookupPackages(a[0])
+	if !ok {
+		return
+	}
+	for _, p := range pkgs {
+		pf, found = p.LookupPureFunc(a[1])
+		if found {
+			return
+		}
+	}
+	return
 }
 
 func (p *Package) collectNodes() {
@@ -418,6 +477,28 @@ func (f *File) bindMethods() {
 	}
 }
 
+func (f *File) expandFuncFields(fieldList *ast.FieldList) (fields []*FuncField) {
+	if fieldList != nil {
+		for _, g := range fieldList.List {
+			typeName := f.TryFormatNode(g.Type)
+			m := len(g.Names)
+			if m == 0 {
+				fields = append(fields, &FuncField{
+					TypeName: typeName,
+				})
+			} else {
+				for _, name := range g.Names {
+					fields = append(fields, &FuncField{
+						Name:     name.Name,
+						TypeName: typeName,
+					})
+				}
+			}
+		}
+	}
+	return
+}
+
 func expandFields(fieldList *ast.FieldList) {
 	if fieldList == nil {
 		return
@@ -439,26 +520,36 @@ func expandFields(fieldList *ast.FieldList) {
 	fieldList.List = list
 }
 
-func (f *File) expandFuncFields(fieldList *ast.FieldList) (fields []*FuncField) {
-	if fieldList != nil {
-		for _, g := range fieldList.List {
-			typeName := f.TryFormatNode(g.Type)
-			m := len(g.Names)
-			if m == 0 {
-				fields = append(fields, &FuncField{
-					TypeName: typeName,
-				})
-			} else {
-				for _, name := range g.Names {
-					fields = append(fields, &FuncField{
-						Name:     name.Name,
-						TypeName: typeName,
-					})
-				}
-			}
-		}
+func typeNodeFuncByNameInPkg(name string) (func(Node) bool, bool) {
+	if strings.Contains(name, ".") {
+		return nil, false
 	}
-	return
+	name = strings.TrimLeft(name, "*")
+	return func(n Node) bool {
+		return IsTypeNode(n) && n.Name() == name
+	}, true
+}
+
+// NOTE: lookup FuncNode, but not method function.
+func pureFuncNodeFuncByNameInPkg(name string) (func(Node) bool, bool) {
+	if strings.Contains(name, ".") {
+		return nil, false
+	}
+	name = strings.TrimLeft(name, "*")
+	return func(n Node) bool {
+		return n.Name() == name && IsPureFuncNode(n)
+	}, true
+}
+
+// NOTE: lookup method FuncNode.
+func methodNodeFuncByNameInPkg(name string) (func(Node) bool, bool) {
+	if strings.Contains(name, ".") {
+		return nil, false
+	}
+	name = strings.TrimLeft(name, "*")
+	return func(n Node) bool {
+		return n.Name() == name && IsMethodNode(n)
+	}, true
 }
 
 func getElem(e ast.Expr) ast.Expr {

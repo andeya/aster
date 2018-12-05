@@ -55,11 +55,10 @@ const (
 	Ptr
 )
 
-// IsExported reports whether name is an exported Go symbol
-// (that is, whether it begins with an upper-case letter).
-//
-func IsExported(name string) bool {
-	return ast.IsExported(name)
+// IsTypeNode returns true if b is implementd TypeNode.
+func IsTypeNode(n Node) bool {
+	_, ok := n.(TypeNode)
+	return ok
 }
 
 // IsFuncNode returns true if b is implementd FuncNode.
@@ -68,8 +67,28 @@ func IsFuncNode(n Node) bool {
 	return ok
 }
 
-// IsTypeNode returns true if b is implementd TypeNode.
-func IsTypeNode(n Node) bool {
-	_, ok := n.(TypeNode)
+// IsPureFuncNode returns true if b is implementd FuncNode, but not method function.
+func IsPureFuncNode(n Node) bool {
+	ok := IsFuncNode(n)
+	if ok {
+		_, ok = n.Recv()
+		return !ok
+	}
+	return false
+}
+
+// IsMethodNode returns true if b is implementd method FuncNode.
+func IsMethodNode(n Node) bool {
+	ok := IsFuncNode(n)
+	if ok {
+		_, ok = n.Recv()
+	}
 	return ok
+}
+
+// IsExported reports whether name is an exported Go symbol
+// (that is, whether it begins with an upper-case letter).
+//
+func IsExported(name string) bool {
+	return ast.IsExported(name)
 }

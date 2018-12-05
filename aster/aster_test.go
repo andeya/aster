@@ -137,4 +137,9 @@ func TestFunc(t *testing.T) {
 		}
 		return true
 	})
+	pf, ok := f.LookupPureFunc("F2")
+	if !ok {
+		t.Fatal("not found F2")
+	}
+	t.Log(pf)
 }
