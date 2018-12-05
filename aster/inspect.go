@@ -527,7 +527,7 @@ func typeObjectFuncByNameInPkg(name string) (func(Object) bool, bool) {
 	}
 	name = strings.TrimLeft(name, "*")
 	return func(obj Object) bool {
-		return IsTypeObject(obj) && obj.Name() == name
+		return obj.ObjKind() == ast.Typ && obj.Name() == name
 	}, true
 }
 
@@ -538,7 +538,7 @@ func pureFuncObjectFuncByNameInPkg(name string) (func(Object) bool, bool) {
 	}
 	name = strings.TrimLeft(name, "*")
 	return func(obj Object) bool {
-		return obj.Name() == name && IsPureFuncObject(obj)
+		return obj.Name() == name && IsPureFunc(obj)
 	}, true
 }
 
@@ -549,7 +549,7 @@ func methodNodeFuncByNameInPkg(name string) (func(Object) bool, bool) {
 	}
 	name = strings.TrimLeft(name, "*")
 	return func(obj Object) bool {
-		return obj.Name() == name && IsMethodNode(obj)
+		return obj.Name() == name && IsMethod(obj)
 	}, true
 }
 

@@ -20,7 +20,7 @@ import (
 
 //go:generate Stringer -type Kind
 
-// A Kind represents the specific kind of type that a Type represents.
+// A Kind represents the specific kind of an Object data.
 // The zero Kind is not a valid kind.
 type Kind uint
 
@@ -55,19 +55,9 @@ const (
 	Ptr
 )
 
-// IsTypeObject returns true if b is implementd TypeObject.
-func IsTypeObject(obj Object) bool {
-	return obj.ObjKind() == ast.Typ
-}
-
-// IsFuncObject returns true if b is implementd FuncObject.
-func IsFuncObject(obj Object) bool {
-	return obj.Kind() == Func
-}
-
-// IsPureFuncObject returns true if b is implementd FuncObject, but not method function.
-func IsPureFuncObject(obj Object) bool {
-	ok := IsFuncObject(obj)
+// IsPureFunc returns true if b is implementd FuncObject, but not method function.
+func IsPureFunc(obj Object) bool {
+	ok := obj.Kind() == Func
 	if ok {
 		_, ok = obj.Recv()
 		return !ok
@@ -75,9 +65,9 @@ func IsPureFuncObject(obj Object) bool {
 	return false
 }
 
-// IsMethodNode returns true if b is implementd method FuncObject.
-func IsMethodNode(obj Object) bool {
-	ok := IsFuncObject(obj)
+// IsMethod returns true if b is implementd method FuncObject.
+func IsMethod(obj Object) bool {
+	ok := obj.Kind() == Func
 	if ok {
 		_, ok = obj.Recv()
 	}
