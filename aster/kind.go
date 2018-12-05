@@ -62,6 +62,7 @@ func IsTypeNode(n Node) bool {
 }
 
 // IsFuncNode returns true if b is implementd FuncNode.
+// NOTE: Equivalent to n.Kind()==Func
 func IsFuncNode(n Node) bool {
 	_, ok := n.(FuncNode)
 	return ok
