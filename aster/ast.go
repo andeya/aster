@@ -88,30 +88,30 @@ type (
 	// Node the basic sub-interface based on ast.Node extension,
 	// is the supertype of other extended interfaces.
 	Node interface {
-		commNodeMethods
-		funcNodeMethods
-		typeNodeMethods
+		CommNodeMethods
+		FuncNodeMethods
+		TypeNodeMethods
 		blockIdentify() // only as identify method
 	}
 	// FuncNode is the representation of a Go function or method.
 	// NOTE: Kind = Func
 	FuncNode interface {
-		commNodeMethods
-		funcNodeMethods
+		CommNodeMethods
+		FuncNodeMethods
 		funcNodeIdentify() // only as identify method
 	}
 	// TypeNode is the representation of a Go type node.
 	// NOTE: Kind != Func
 	TypeNode interface {
-		commNodeMethods
-		typeNodeMethods
+		CommNodeMethods
+		TypeNodeMethods
 		typeNodeIdentify() // only as identify method
 	}
 )
 
 type (
-	// commNodeMethods is the common methods of block interface.
-	commNodeMethods interface {
+	// CommNodeMethods is the common methods of block interface.
+	CommNodeMethods interface {
 		// Node returns origin AST node.
 		Node() ast.Node
 
@@ -135,9 +135,9 @@ type (
 		String() string
 	}
 
-	// typeNodeMethods is the representation of a Go type node.
+	// TypeNodeMethods is the representation of a Go type node.
 	// NOTE: Kind != Func
-	typeNodeMethods interface {
+	TypeNodeMethods interface {
 		// IsAssign is there `=` for declared type?
 		IsAssign() bool
 
@@ -187,9 +187,9 @@ type (
 		FieldByName(name string) (field *StructField, found bool)
 	}
 
-	// funcNodeMethods is the representation of a Go function or method.
+	// FuncNodeMethods is the representation of a Go function or method.
 	// NOTE: Kind = Func
-	funcNodeMethods interface {
+	FuncNodeMethods interface {
 		// NumParam returns a function type's input parameter count.
 		NumParam() int
 
