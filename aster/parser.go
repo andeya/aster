@@ -81,7 +81,7 @@ func (m *Module) Reparse() (first error) {
 //
 // If the source couldn't be read, the returned AST is nil and the error
 // indicates the specific failure. If the source was read but syntax
-// errors were found, the result is a partial AST (with ast.Bad* nodes
+// errors were found, the result is a partial AST (with ast.Bad* objects
 // representing the fragments of erroneous source code). Multiple errors
 // are returned via a scanner.ErrorList which is sorted by file position.
 //
@@ -119,7 +119,7 @@ func (f *File) Reparse() (err error) {
 		f.PkgName = file.Name.Name
 	}
 	f.setImports()
-	f.collectNodes(true)
+	f.collectObjects(true)
 	return
 }
 
@@ -153,7 +153,7 @@ func convertPackage(mod *Module, dir string, pkg *ast.Package) *Package {
 	for k, v := range pkg.Files {
 		p.Files[k] = convertFile(p, k, v)
 	}
-	p.collectNodes()
+	p.collectObjects()
 	return p
 }
 

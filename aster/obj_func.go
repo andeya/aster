@@ -19,13 +19,14 @@ import (
 	"go/ast"
 )
 
-// funcNode function Declaration
-type funcNode struct {
+// funcObject function Declaration
+type funcObject struct {
 	*super
-	node    ast.Node // *ast.FuncLit or *ast.FuncDecl
-	recv    *FuncField
-	params  []*FuncField
-	results []*FuncField
+	node     ast.Node // *ast.FuncLit or *ast.FuncDecl
+	isGlobal bool
+	recv     *FuncField
+	params   []*FuncField
+	results  []*FuncField
 }
 
 // FuncField function params or results.
@@ -34,41 +35,53 @@ type FuncField struct {
 	TypeName string // not contain `*`
 }
 
-var _ Node = (*funcNode)(nil)
-var _ FuncNode = (*funcNode)(nil)
+var _ Object = (*funcObject)(nil)
+var _ FuncObject = (*funcObject)(nil)
 
-func (f *File) newFuncNode(namePtr *string, doc *ast.CommentGroup,
-	node ast.Node, recv *FuncField, params, results []*FuncField) *funcNode {
+func (f *File) newFuncObject(namePtr *string, doc *ast.CommentGroup,
+	node ast.Node, recv *FuncField, params, results []*FuncField) *funcObject {
+	var isGlobal bool
+	var objKind ast.ObjKind
 	switch node.(type) {
 	case *ast.FuncLit:
+		objKind = ast.Var
+		isGlobal = f.isGlobalTypOrFun(namePtr, node)
 	case *ast.FuncDecl:
+		objKind = ast.Fun
+		isGlobal = true
 	default:
 		panic(fmt.Sprintf("want: *ast.FuncLit or *ast.FuncDecl, but got: %T", node))
 	}
-	ft := &funcNode{
-		super:   f.newSuper(namePtr, Func, doc),
-		node:    node,
-		recv:    recv,
-		params:  params,
-		results: results,
+	ft := &funcObject{
+		super:    f.newSuper(namePtr, objKind, Func, doc),
+		node:     node,
+		isGlobal: isGlobal,
+		recv:     recv,
+		params:   params,
+		results:  results,
 	}
 	return ft
 }
 
-func (f *funcNode) funcNodeIdentify() {}
+func (f *funcObject) funcObjectIdentify() {}
 
-// Node returns origin AST node.
-func (f *funcNode) Node() ast.Node {
+// Decl returns the declaration node.
+func (f *funcObject) Decl() ast.Node {
 	return f.node
 }
 
+// IsGlobal returns whether the declaration is global.
+func (f *funcObject) IsGlobal() bool {
+	return f.isGlobal
+}
+
 // String returns the formated code block.
-func (f *funcNode) String() string {
-	s, err := f.file.FormatNode(f.Node())
+func (f *funcObject) String() string {
+	s, err := f.file.FormatNode(f.Decl())
 	if err != nil {
 		return fmt.Sprintf("// Formatting error: %s", err.Error())
 	}
-	if _, ok := f.node.(*ast.FuncDecl); ok {
+	if f.ObjKind() == ast.Fun {
 		return s
 	}
 	s = "var " + f.Name() + " = " + s
@@ -80,17 +93,17 @@ func (f *funcNode) String() string {
 }
 
 // NumParam returns a function type's input parameter count.
-func (f *funcNode) NumParam() int {
+func (f *funcObject) NumParam() int {
 	return len(f.params)
 }
 
 // NumResult returns a function type's output parameter count.
-func (f *funcNode) NumResult() int {
+func (f *funcObject) NumResult() int {
 	return len(f.results)
 }
 
 // Param returns the type of a function type's i'th input parameter.
-func (f *funcNode) Param(i int) (ff *FuncField, found bool) {
+func (f *funcObject) Param(i int) (ff *FuncField, found bool) {
 	if i < 0 || i >= len(f.params) {
 		return
 	}
@@ -98,7 +111,7 @@ func (f *funcNode) Param(i int) (ff *FuncField, found bool) {
 }
 
 // Result returns the type of a function type's i'th output parameter.
-func (f *funcNode) Result(i int) (ff *FuncField, found bool) {
+func (f *funcObject) Result(i int) (ff *FuncField, found bool) {
 	if i < 0 || i >= len(f.results) {
 		return
 	}
@@ -116,7 +129,7 @@ func (f *funcNode) Result(i int) (ff *FuncField, found bool) {
 //	f.Param(1) is the Type for "[]float64"
 //	f.IsVariadic() == true
 //
-func (f *funcNode) IsVariadic() bool {
+func (f *funcObject) IsVariadic() bool {
 	switch t := f.node.(type) {
 	case *ast.FuncLit:
 		return isVariadic(t.Type)
@@ -128,6 +141,6 @@ func (f *funcNode) IsVariadic() bool {
 }
 
 // Recv returns receiver (methods); or returns false (functions)
-func (f *funcNode) Recv() (*FuncField, bool) {
+func (f *funcObject) Recv() (*FuncField, bool) {
 	return f.recv, f.recv != nil
 }

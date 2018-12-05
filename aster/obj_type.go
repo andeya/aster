@@ -27,19 +27,29 @@ import (
 
 type superType struct {
 	*super
+	isGlobal bool
 	isAssign bool // is there `=` for declared type?
-	methods  []FuncNode
+	methods  []FuncObject
 }
 
-func (f *File) newSuperType(namePtr *string, kind Kind, doc *ast.CommentGroup,
-	isAssign bool) *superType {
+func (f *File) newSuperType(namePtr *string, kind Kind, isGlobal bool, doc *ast.CommentGroup,
+	isAssign bool, objKind ...ast.ObjKind) *superType {
+	a := ast.Typ
+	if len(objKind) > 0 {
+		a = objKind[0]
+	}
 	return &superType{
-		super:    f.newSuper(namePtr, kind, doc),
+		super:    f.newSuper(namePtr, a, kind, doc),
+		isGlobal: isGlobal,
 		isAssign: isAssign,
 	}
 }
 
-func (s *superType) typeNodeIdentify() {}
+func (s *superType) typeObjectIdentify() {}
+
+func (s *superType) IsGlobal() bool {
+	return s.isGlobal
+}
 
 // IsAssign is there `=` for declared type?
 func (s *superType) IsAssign() bool {
@@ -54,7 +64,7 @@ func (s *superType) IsAssign() bool {
 //
 // For an interface type, the returned Method's Type field gives the
 // method signature, without a receiver, and the Func field is nil.
-func (s *superType) Method(i int) (FuncNode, bool) {
+func (s *superType) Method(i int) (FuncObject, bool) {
 	if i < 0 || i >= len(s.methods) {
 		return nil, false
 	}
@@ -69,7 +79,7 @@ func (s *superType) Method(i int) (FuncNode, bool) {
 //
 // For an interface type, the returned Method's Type field gives the
 // method signature, without a receiver, and the Func field is nil.
-func (s *superType) MethodByName(name string) (FuncNode, bool) {
+func (s *superType) MethodByName(name string) (FuncObject, bool) {
 	for _, m := range s.methods {
 		if m.Name() == name {
 			return m, true
@@ -84,7 +94,7 @@ func (s *superType) NumMethod() int {
 }
 
 // Implements reports whether the type implements the interface type u.
-func (s *superType) Implements(u TypeNode) bool {
+func (s *superType) Implements(u TypeObject) bool {
 	for i := u.NumMethod() - 1; i >= 0; i-- {
 		um, _ := u.Method(i)
 		cm, ok := s.MethodByName(um.Name())
@@ -112,7 +122,7 @@ func (s *superType) Implements(u TypeNode) bool {
 	return true
 }
 
-func (s *superType) addMethod(method FuncNode) error {
+func (s *superType) addMethod(method FuncObject) error {
 	field, ok := method.Recv()
 	if !ok {
 		return fmt.Errorf("not method: %s", method.Name())
@@ -131,8 +141,8 @@ type aliasType struct {
 	ast.Expr // type node
 }
 
-var _ Node = (*aliasType)(nil)
-var _ TypeNode = (*aliasType)(nil)
+var _ Object = (*aliasType)(nil)
+var _ TypeObject = (*aliasType)(nil)
 
 func (f *File) newAliasType(namePtr *string, doc *ast.CommentGroup, assign token.Pos,
 	typ ast.Expr) *basicType {
@@ -141,13 +151,13 @@ func (f *File) newAliasType(namePtr *string, doc *ast.CommentGroup, assign token
 		kind = Ptr
 	}
 	return &basicType{
-		superType: f.newSuperType(namePtr, kind, doc, assign != token.NoPos),
+		superType: f.newSuperType(namePtr, kind, f.isGlobalTypOrFun(namePtr, typ), doc, assign != token.NoPos),
 		Expr:      typ,
 	}
 }
 
-// Node returns origin AST node.
-func (a *aliasType) Node() ast.Node {
+// Decl returns the declaration node.
+func (a *aliasType) Decl() ast.Node {
 	return a.Expr
 }
 
@@ -162,8 +172,8 @@ type basicType struct {
 	ast.Expr
 }
 
-var _ Node = (*basicType)(nil)
-var _ TypeNode = (*basicType)(nil)
+var _ Object = (*basicType)(nil)
+var _ TypeObject = (*basicType)(nil)
 
 func (f *File) newBasicType(namePtr *string, doc *ast.CommentGroup, assign token.Pos,
 	typ ast.Expr) (*basicType, bool) {
@@ -173,13 +183,13 @@ func (f *File) newBasicType(namePtr *string, doc *ast.CommentGroup, assign token
 		return nil, false
 	}
 	return &basicType{
-		superType: f.newSuperType(namePtr, kind, doc, assign != token.NoPos),
+		superType: f.newSuperType(namePtr, kind, f.isGlobalTypOrFun(namePtr, typ), doc, assign != token.NoPos),
 		Expr:      typ,
 	}, true
 }
 
 func (f *File) newBasicOrAliasType(namePtr *string, doc *ast.CommentGroup, assign token.Pos,
-	typ ast.Expr) Node {
+	typ ast.Expr) Object {
 	t, ok := f.newBasicType(namePtr, doc, assign, typ)
 	if ok {
 		return t
@@ -187,8 +197,8 @@ func (f *File) newBasicOrAliasType(namePtr *string, doc *ast.CommentGroup, assig
 	return f.newAliasType(namePtr, doc, assign, typ)
 }
 
-// Node returns origin AST node.
-func (b *basicType) Node() ast.Node {
+// Decl returns the declaration node.
+func (b *basicType) Decl() ast.Node {
 	return b.Expr
 }
 
@@ -203,8 +213,8 @@ type listType struct {
 	*ast.ArrayType
 }
 
-var _ Node = (*listType)(nil)
-var _ TypeNode = (*listType)(nil)
+var _ Object = (*listType)(nil)
+var _ TypeObject = (*listType)(nil)
 
 func (f *File) newListType(namePtr *string, doc *ast.CommentGroup, assign token.Pos,
 	typ *ast.ArrayType) *listType {
@@ -213,13 +223,13 @@ func (f *File) newListType(namePtr *string, doc *ast.CommentGroup, assign token.
 		kind = Array
 	}
 	return &listType{
-		superType: f.newSuperType(namePtr, kind, doc, assign != token.NoPos),
+		superType: f.newSuperType(namePtr, kind, f.isGlobalTypOrFun(namePtr, typ), doc, assign != token.NoPos),
 		ArrayType: typ,
 	}
 }
 
-// Node returns origin AST node.
-func (l *listType) Node() ast.Node {
+// Decl returns the declaration node.
+func (l *listType) Decl() ast.Node {
 	return l.ArrayType
 }
 
@@ -244,19 +254,19 @@ type mapType struct {
 	*ast.MapType
 }
 
-var _ Node = (*mapType)(nil)
-var _ TypeNode = (*mapType)(nil)
+var _ Object = (*mapType)(nil)
+var _ TypeObject = (*mapType)(nil)
 
 func (f *File) newMapType(namePtr *string, doc *ast.CommentGroup, assign token.Pos,
 	typ *ast.MapType) *mapType {
 	return &mapType{
-		superType: f.newSuperType(namePtr, Map, doc, assign != token.NoPos),
+		superType: f.newSuperType(namePtr, Map, f.isGlobalTypOrFun(namePtr, typ), doc, assign != token.NoPos),
 		MapType:   typ,
 	}
 }
 
-// Node returns origin AST node.
-func (m *mapType) Node() ast.Node {
+// Decl returns the declaration node.
+func (m *mapType) Decl() ast.Node {
 	return m.MapType
 }
 
@@ -271,19 +281,19 @@ type chanType struct {
 	*ast.ChanType
 }
 
-var _ Node = (*chanType)(nil)
-var _ TypeNode = (*chanType)(nil)
+var _ Object = (*chanType)(nil)
+var _ TypeObject = (*chanType)(nil)
 
 func (f *File) newChanType(namePtr *string, doc *ast.CommentGroup, assign token.Pos,
 	typ *ast.ChanType) *chanType {
 	return &chanType{
-		superType: f.newSuperType(namePtr, Chan, doc, assign != token.NoPos),
+		superType: f.newSuperType(namePtr, Chan, f.isGlobalTypOrFun(namePtr, typ), doc, assign != token.NoPos),
 		ChanType:  typ,
 	}
 }
 
-// Node returns origin AST node.
-func (c *chanType) Node() ast.Node {
+// Decl returns the declaration node.
+func (c *chanType) Decl() ast.Node {
 	return c.ChanType
 }
 
@@ -303,19 +313,19 @@ type interfaceType struct {
 	*ast.InterfaceType
 }
 
-var _ Node = (*interfaceType)(nil)
-var _ TypeNode = (*interfaceType)(nil)
+var _ Object = (*interfaceType)(nil)
+var _ TypeObject = (*interfaceType)(nil)
 
 func (f *File) newInterfaceType(namePtr *string, doc *ast.CommentGroup, assign token.Pos,
 	typ *ast.InterfaceType) *interfaceType {
 	return &interfaceType{
-		superType:     f.newSuperType(namePtr, Interface, doc, assign != token.NoPos),
+		superType:     f.newSuperType(namePtr, Interface, f.isGlobalTypOrFun(namePtr, typ), doc, assign != token.NoPos),
 		InterfaceType: typ,
 	}
 }
 
-// Node returns origin AST node.
-func (i *interfaceType) Node() ast.Node {
+// Decl returns the declaration node.
+func (i *interfaceType) Decl() ast.Node {
 	return i.InterfaceType
 }
 
@@ -331,19 +341,20 @@ type structType struct {
 	fields []*StructField // sorted by offset
 }
 
-var _ Node = (*structType)(nil)
-var _ TypeNode = (*structType)(nil)
+var _ Object = (*structType)(nil)
+var _ TypeObject = (*structType)(nil)
 
-func (f *File) newStructType(namePtr *string, doc *ast.CommentGroup, assign token.Pos,
+func (f *File) newStructType(namePtr *string, objKind ast.ObjKind, doc *ast.CommentGroup, assign token.Pos,
 	typ *ast.StructType) *structType {
 	return &structType{
-		superType:  f.newSuperType(namePtr, Struct, doc, assign != token.NoPos),
+		superType: f.newSuperType(namePtr, Struct, f.isGlobalTypOrFun(namePtr, typ),
+			doc, assign != token.NoPos, objKind),
 		StructType: typ,
 	}
 }
 
-// Node returns origin AST node.
-func (s *structType) Node() ast.Node {
+// Decl returns the declaration node.
+func (s *structType) Decl() ast.Node {
 	return s.StructType
 }
 
@@ -544,19 +555,21 @@ func (s *StructTag) String() string {
 	return s.tags.String()
 }
 
-func joinType(n Node, file *File) string {
-	s, err := file.FormatNode(n.Node())
+func joinType(obj Object, file *File) string {
+	s, err := file.FormatNode(obj.Decl())
 	if err != nil {
 		return fmt.Sprintf("// Formatting error: %s", err.Error())
 	}
+	doc := obj.Doc()
+	if doc != "" {
+		doc = "// " + doc
+	}
 	var assign string
-	if n.IsAssign() {
+	if obj.IsAssign() {
 		assign = "= "
 	}
-	s = "type " + n.Name() + " " + assign + s
-	doc := n.Doc()
-	if doc != "" {
-		s = "// " + doc + s
+	if obj.ObjKind() == ast.Var {
+		return "var " + obj.Name() + " " + assign + s
 	}
-	return s
+	return doc + "type " + obj.Name() + " " + assign + s
 }

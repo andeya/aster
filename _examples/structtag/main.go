@@ -13,12 +13,12 @@ var (
 	src      = flag.String("src", "package test", "code text")
 )
 
-func setStructTag(n aster.Node) bool {
-	if n.Kind() != aster.Struct {
+func setStructTag(obj aster.Object) bool {
+	if obj.Kind() != aster.Struct {
 		return true
 	}
-	for i := n.NumField() - 1; i >= 0; i-- {
-		field := n.Field(i)
+	for i := obj.NumField() - 1; i >= 0; i-- {
+		field := obj.Field(i)
 		if !aster.IsExported(field.Name()) {
 			continue
 		}

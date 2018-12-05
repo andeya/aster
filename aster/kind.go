@@ -55,34 +55,31 @@ const (
 	Ptr
 )
 
-// IsTypeNode returns true if b is implementd TypeNode.
-func IsTypeNode(n Node) bool {
-	_, ok := n.(TypeNode)
-	return ok
+// IsTypeObject returns true if b is implementd TypeObject.
+func IsTypeObject(obj Object) bool {
+	return obj.ObjKind() == ast.Typ
 }
 
-// IsFuncNode returns true if b is implementd FuncNode.
-// NOTE: Equivalent to n.Kind()==Func
-func IsFuncNode(n Node) bool {
-	_, ok := n.(FuncNode)
-	return ok
+// IsFuncObject returns true if b is implementd FuncObject.
+func IsFuncObject(obj Object) bool {
+	return obj.Kind() == Func
 }
 
-// IsPureFuncNode returns true if b is implementd FuncNode, but not method function.
-func IsPureFuncNode(n Node) bool {
-	ok := IsFuncNode(n)
+// IsPureFuncObject returns true if b is implementd FuncObject, but not method function.
+func IsPureFuncObject(obj Object) bool {
+	ok := IsFuncObject(obj)
 	if ok {
-		_, ok = n.Recv()
+		_, ok = obj.Recv()
 		return !ok
 	}
 	return false
 }
 
-// IsMethodNode returns true if b is implementd method FuncNode.
-func IsMethodNode(n Node) bool {
-	ok := IsFuncNode(n)
+// IsMethodNode returns true if b is implementd method FuncObject.
+func IsMethodNode(obj Object) bool {
+	ok := IsFuncObject(obj)
 	if ok {
-		_, ok = n.Recv()
+		_, ok = obj.Recv()
 	}
 	return ok
 }

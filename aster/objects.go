@@ -48,20 +48,20 @@ type Package struct {
 // A File node represents a Go source file.
 //
 // The Comments list contains all comments in the source file in order of
-// appearance, including the comments that are pointed to from other nodes
+// appearance, including the comments that are pointed to from other objects
 // via Doc and Comment fields.
 //
 // For correct printing of source code containing comments (using packages
 // go/format and go/printer), special care must be taken to update comments
 // when a File's syntax tree is modified: For printing, comments are interspersed
-// between tokens based on their position. If syntax tree nodes are
+// between tokens based on their position. If syntax tree objects are
 // removed or moved, relevant comments in their vicinity must also be removed
 // (from the File.Comments list) or moved accordingly (by updating their
 // positions). A CommentMap may be used to facilitate some of these operations.
 //
 // Whether and how a comment is associated with a node depends on the
 // interpretation of the syntax tree by the manipulating program: Except for Doc
-// and Comment comments directly associated with nodes, the remaining comments
+// and Comment comments directly associated with objects, the remaining comments
 // are "free-floating" (see also issues #18593, #20744).
 //
 type File struct {
@@ -73,7 +73,7 @@ type File struct {
 	Src      []byte
 	mode     parser.Mode
 	Imports  []*Import
-	Nodes    map[token.Pos]Node // <type node pos, Node>
+	Objects  map[token.Pos]Object // <type node pos, Node>
 }
 
 // Import import info
@@ -85,35 +85,40 @@ type Import struct {
 }
 
 type (
-	// Node the basic sub-interface based on ast.Node extension,
+	// Object the basic sub-interface based on ast.Node extension,
 	// is the supertype of other extended interfaces.
-	Node interface {
-		CommNodeMethods
-		FuncNodeMethods
-		TypeNodeMethods
-		blockIdentify() // only as identify method
+	Object interface {
+		CommObjectMethods
+		FuncObjectMethods
+		TypeObjectMethods
+		objectIdentify() // only as identify method
 	}
-	// FuncNode is the representation of a Go function or method.
-	// NOTE: Kind = Func
-	FuncNode interface {
-		CommNodeMethods
-		FuncNodeMethods
-		funcNodeIdentify() // only as identify method
+	// FuncObject is the representation of a Go function or method.
+	// NOTE: Equivalent to n.Kind()==Func
+	FuncObject interface {
+		CommObjectMethods
+		FuncObjectMethods
+		funcObjectIdentify() // only as identify method
 	}
-	// TypeNode is the representation of a Go type node.
-	// NOTE: Kind != Func
-	TypeNode interface {
-		CommNodeMethods
-		TypeNodeMethods
-		typeNodeIdentify() // only as identify method
+	// TypeObject is the representation of a Go type node.
+	TypeObject interface {
+		CommObjectMethods
+		TypeObjectMethods
+		typeObjectIdentify() // only as identify method
+	}
+	// ConstObject is the representation of a Go const value node.
+	ConstObject interface {
+		CommObjectMethods
+		TypeDecl() (*FuncField, bool)
+		constObjectIdentify() // only as identify method
 	}
 )
 
 type (
-	// CommNodeMethods is the common methods of block interface.
-	CommNodeMethods interface {
-		// Node returns origin AST node.
-		Node() ast.Node
+	// CommObjectMethods is the common methods of Object interface.
+	CommObjectMethods interface {
+		// Decl returns the declaration node.
+		Decl() ast.Node
 
 		// Name returns the type's name within its package for a defined type.
 		// For other (non-defined) types it returns the empty string.
@@ -125,8 +130,14 @@ type (
 		// Filename returns filename to which the node belongs
 		Filename() string
 
-		// Kind returns the specific kind of this type.
+		// ObjKind returns what the object represents.
+		ObjKind() ast.ObjKind
+
+		// Kind returns the data kind.
 		Kind() Kind
+
+		// IsGlobal returns whether the declaration is global.
+		IsGlobal() bool
 
 		// Doc returns lead comment.
 		Doc() string
@@ -135,9 +146,9 @@ type (
 		String() string
 	}
 
-	// TypeNodeMethods is the representation of a Go type node.
+	// TypeObjectMethods is the representation of a Go type node.
 	// NOTE: Kind != Func
-	TypeNodeMethods interface {
+	TypeObjectMethods interface {
 		// IsAssign is there `=` for declared type?
 		IsAssign() bool
 
@@ -150,7 +161,7 @@ type (
 		//
 		// For an interface type, the returned Method's Type field gives the
 		// method signature, without a receiver, and the Func field is nil.
-		Method(int) (FuncNode, bool)
+		Method(int) (FuncObject, bool)
 
 		// MethodByName returns the method with that name in the type's
 		// method set and a boolean indicating if the method was found.
@@ -160,15 +171,15 @@ type (
 		//
 		// For an interface type, the returned Method's Type field gives the
 		// method signature, without a receiver, and the Func field is nil.
-		MethodByName(string) (FuncNode, bool)
+		MethodByName(string) (FuncObject, bool)
 
 		// Implements reports whether the type implements the interface type u.
-		Implements(u TypeNode) bool
+		Implements(u TypeObject) bool
 
-		// addMethod adds a FuncNode as method.
+		// addMethod adds a FuncObject as method.
 		//
-		// Returns error if the FuncNode is already exist or receiver is not the TypeNode.
-		addMethod(FuncNode) error
+		// Returns error if the FuncObject is already exist or receiver is not the TypeObject.
+		addMethod(FuncObject) error
 
 		// -------------- Only for Kind=Struct ---------------
 
@@ -187,9 +198,9 @@ type (
 		FieldByName(name string) (field *StructField, found bool)
 	}
 
-	// FuncNodeMethods is the representation of a Go function or method.
+	// FuncObjectMethods is the representation of a Go function or method.
 	// NOTE: Kind = Func
-	FuncNodeMethods interface {
+	FuncObjectMethods interface {
 		// NumParam returns a function type's input parameter count.
 		NumParam() int
 
@@ -274,31 +285,24 @@ func (NilNode) End() token.Pos { return token.NoPos }
 
 // super common node extension info
 type super struct {
-	file        *File
-	kind        Kind
-	namePtr     *string
-	pkgNamePtr  *string
-	filenamePtr *string
-	doc         *ast.CommentGroup
+	file    *File
+	namePtr *string
+	objKind ast.ObjKind
+	kind    Kind
+	doc     *ast.CommentGroup
 }
 
-func (f *File) newSuper(namePtr *string, kind Kind, doc *ast.CommentGroup) *super {
+func (f *File) newSuper(namePtr *string, objKind ast.ObjKind, kind Kind, doc *ast.CommentGroup) *super {
 	return &super{
-		file:        f,
-		kind:        kind,
-		namePtr:     namePtr,
-		pkgNamePtr:  &f.PkgName,
-		filenamePtr: &f.Filename,
-		doc:         doc,
+		file:    f,
+		objKind: objKind,
+		kind:    kind,
+		namePtr: namePtr,
+		doc:     doc,
 	}
 }
 
-func (s *super) blockIdentify() {}
-
-// Kind returns the facade kind of this node.
-func (s *super) Kind() Kind {
-	return s.kind
-}
+func (s *super) objectIdentify() {}
 
 // Name returns the type's name within its package for a defined type.
 // For other (non-defined) types it returns the empty string.
@@ -311,12 +315,22 @@ func (s *super) Name() string {
 
 // Filename returns package name to which the node belongs
 func (s *super) PkgName() string {
-	return *s.pkgNamePtr
+	return s.file.PkgName
 }
 
 // Filename returns filename to which the node belongs
 func (s *super) Filename() string {
-	return *s.filenamePtr
+	return s.file.Filename
+}
+
+// ObjKind returns what the object represents.
+func (s *super) ObjKind() ast.ObjKind {
+	return s.objKind
+}
+
+// Kind returns the data kind.
+func (s *super) Kind() Kind {
+	return s.kind
 }
 
 // Doc returns lead comment.
@@ -411,7 +425,7 @@ func (s *super) NumMethod() int {
 //
 // For an interface type, the returned Method's Type field gives the
 // method signature, without a receiver, and the Func field is nil.
-func (s *super) Method(int) (FuncNode, bool) {
+func (s *super) Method(int) (FuncObject, bool) {
 	if s.kind == Func {
 		panic("aster: Kind cant not be aster.Func!")
 	}
@@ -426,7 +440,7 @@ func (s *super) Method(int) (FuncNode, bool) {
 //
 // For an interface type, the returned Method's Type field gives the
 // method signature, without a receiver, and the Func field is nil.
-func (s *super) MethodByName(string) (FuncNode, bool) {
+func (s *super) MethodByName(string) (FuncObject, bool) {
 	if s.kind == Func {
 		panic("aster: Kind cant not be aster.Func!")
 	}
@@ -434,17 +448,17 @@ func (s *super) MethodByName(string) (FuncNode, bool) {
 }
 
 // Implements reports whether the type implements the interface type u.
-func (s *super) Implements(u TypeNode) bool {
+func (s *super) Implements(u TypeObject) bool {
 	if s.kind == Func {
 		panic("aster: Kind cant not be aster.Func!")
 	}
 	panic("aster: (TODO) Coming soon!")
 }
 
-// addMethod adds a FuncNode as method.
+// addMethod adds a FuncObject as method.
 //
-// Returns error if the FuncNode is already exist or receiver is not the TypeNode.
-func (s *super) addMethod(FuncNode) error {
+// Returns error if the FuncObject is already exist or receiver is not the TypeObject.
+func (s *super) addMethod(FuncObject) error {
 	if s.kind == Func {
 		panic("aster: Kind cant not be aster.Func!")
 	}
@@ -476,4 +490,26 @@ func (s *super) FieldByName(name string) (field *StructField, found bool) {
 		panic("aster: Kind must be aster.Struct!")
 	}
 	panic("aster: (TODO) Coming soon!")
+}
+
+func (f *File) isGlobalTypOrFun(namePtr *string, typeNode ast.Node) bool {
+	if namePtr == nil {
+		return false
+	}
+	obj := f.File.Scope.Lookup(*namePtr)
+	if obj == nil {
+		return false
+	}
+	typePos := typeNode.Pos()
+	switch d := obj.Decl.(type) {
+	case *ast.ValueSpec:
+		for _, v := range d.Values {
+			if v.Pos() == typePos {
+				return true
+			}
+		}
+	case *ast.TypeSpec:
+		return d.Type.Pos() == typePos
+	}
+	return false
 }
