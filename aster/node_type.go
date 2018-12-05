@@ -125,54 +125,54 @@ func (s *superType) addMethod(method FuncNode) error {
 	return nil
 }
 
-// AliasType represents a alias type
-type AliasType struct {
+// aliasType represents a alias type
+type aliasType struct {
 	*superType
 	ast.Expr // type node
 }
 
-var _ Node = (*AliasType)(nil)
-var _ TypeNode = (*AliasType)(nil)
+var _ Node = (*aliasType)(nil)
+var _ TypeNode = (*aliasType)(nil)
 
 func (f *File) newAliasType(namePtr *string, doc *ast.CommentGroup, assign token.Pos,
-	typ ast.Expr) *BasicType {
+	typ ast.Expr) *basicType {
 	kind := Suspense
 	if _, ok := typ.(*ast.StarExpr); ok {
 		kind = Ptr
 	}
-	return &BasicType{
+	return &basicType{
 		superType: f.newSuperType(namePtr, kind, doc, assign != token.NoPos),
 		Expr:      typ,
 	}
 }
 
 // Node returns origin AST node.
-func (a *AliasType) Node() ast.Node {
+func (a *aliasType) Node() ast.Node {
 	return a.Expr
 }
 
 // String returns the formated code block.
-func (a *AliasType) String() string {
+func (a *aliasType) String() string {
 	return joinType(a, a.file)
 }
 
-// BasicType represents a basic type
-type BasicType struct {
+// basicType represents a basic type
+type basicType struct {
 	*superType
 	ast.Expr
 }
 
-var _ Node = (*BasicType)(nil)
-var _ TypeNode = (*BasicType)(nil)
+var _ Node = (*basicType)(nil)
+var _ TypeNode = (*basicType)(nil)
 
 func (f *File) newBasicType(namePtr *string, doc *ast.CommentGroup, assign token.Pos,
-	typ ast.Expr) (*BasicType, bool) {
+	typ ast.Expr) (*basicType, bool) {
 	basicName := strings.TrimLeft(f.TryFormatNode(typ), "*")
 	kind, found := getBasicKind(basicName)
 	if !found {
 		return nil, false
 	}
-	return &BasicType{
+	return &basicType{
 		superType: f.newSuperType(namePtr, kind, doc, assign != token.NoPos),
 		Expr:      typ,
 	}, true
@@ -188,49 +188,49 @@ func (f *File) newBasicOrAliasType(namePtr *string, doc *ast.CommentGroup, assig
 }
 
 // Node returns origin AST node.
-func (b *BasicType) Node() ast.Node {
+func (b *basicType) Node() ast.Node {
 	return b.Expr
 }
 
 // String returns the formated code block.
-func (b *BasicType) String() string {
+func (b *basicType) String() string {
 	return joinType(b, b.file)
 }
 
-// ListType represents an array or slice type.
-type ListType struct {
+// listType represents an array or slice type.
+type listType struct {
 	*superType
 	*ast.ArrayType
 }
 
-var _ Node = (*ListType)(nil)
-var _ TypeNode = (*ListType)(nil)
+var _ Node = (*listType)(nil)
+var _ TypeNode = (*listType)(nil)
 
 func (f *File) newListType(namePtr *string, doc *ast.CommentGroup, assign token.Pos,
-	typ *ast.ArrayType) *ListType {
+	typ *ast.ArrayType) *listType {
 	kind := Slice
 	if typ.Len != nil {
 		kind = Array
 	}
-	return &ListType{
+	return &listType{
 		superType: f.newSuperType(namePtr, kind, doc, assign != token.NoPos),
 		ArrayType: typ,
 	}
 }
 
 // Node returns origin AST node.
-func (l *ListType) Node() ast.Node {
+func (l *listType) Node() ast.Node {
 	return l.ArrayType
 }
 
 // String returns the formated code block.
-func (l *ListType) String() string {
+func (l *listType) String() string {
 	return joinType(l, l.file)
 }
 
 // Len returns list's length if it is array type,
 // otherwise returns false.
-func (l *ListType) Len() (int, bool) {
+func (l *listType) Len() (int, bool) {
 	if l.Kind() == Slice {
 		return -1, false
 	}
@@ -238,129 +238,129 @@ func (l *ListType) Len() (int, bool) {
 	return cnt, true
 }
 
-// MapType represents a map type.
-type MapType struct {
+// mapType represents a map type.
+type mapType struct {
 	*superType
 	*ast.MapType
 }
 
-var _ Node = (*MapType)(nil)
-var _ TypeNode = (*MapType)(nil)
+var _ Node = (*mapType)(nil)
+var _ TypeNode = (*mapType)(nil)
 
 func (f *File) newMapType(namePtr *string, doc *ast.CommentGroup, assign token.Pos,
-	typ *ast.MapType) *MapType {
-	return &MapType{
+	typ *ast.MapType) *mapType {
+	return &mapType{
 		superType: f.newSuperType(namePtr, Map, doc, assign != token.NoPos),
 		MapType:   typ,
 	}
 }
 
 // Node returns origin AST node.
-func (m *MapType) Node() ast.Node {
+func (m *mapType) Node() ast.Node {
 	return m.MapType
 }
 
 // String returns the formated code block.
-func (m *MapType) String() string {
+func (m *mapType) String() string {
 	return joinType(m, m.file)
 }
 
-// ChanType represents a channel type.
-type ChanType struct {
+// chanType represents a channel type.
+type chanType struct {
 	*superType
 	*ast.ChanType
 }
 
-var _ Node = (*ChanType)(nil)
-var _ TypeNode = (*ChanType)(nil)
+var _ Node = (*chanType)(nil)
+var _ TypeNode = (*chanType)(nil)
 
 func (f *File) newChanType(namePtr *string, doc *ast.CommentGroup, assign token.Pos,
-	typ *ast.ChanType) *ChanType {
-	return &ChanType{
+	typ *ast.ChanType) *chanType {
+	return &chanType{
 		superType: f.newSuperType(namePtr, Chan, doc, assign != token.NoPos),
 		ChanType:  typ,
 	}
 }
 
 // Node returns origin AST node.
-func (c *ChanType) Node() ast.Node {
+func (c *chanType) Node() ast.Node {
 	return c.ChanType
 }
 
 // String returns the formated code block.
-func (c *ChanType) String() string {
+func (c *chanType) String() string {
 	return joinType(c, c.file)
 }
 
 // Dir returns a channel type's direction.
-func (c *ChanType) Dir() ast.ChanDir {
+func (c *chanType) Dir() ast.ChanDir {
 	return c.ChanType.Dir
 }
 
-// InterfaceType represents a interface type.
-type InterfaceType struct {
+// interfaceType represents a interface type.
+type interfaceType struct {
 	*superType
 	*ast.InterfaceType
 }
 
-var _ Node = (*InterfaceType)(nil)
-var _ TypeNode = (*InterfaceType)(nil)
+var _ Node = (*interfaceType)(nil)
+var _ TypeNode = (*interfaceType)(nil)
 
 func (f *File) newInterfaceType(namePtr *string, doc *ast.CommentGroup, assign token.Pos,
-	typ *ast.InterfaceType) *InterfaceType {
-	return &InterfaceType{
+	typ *ast.InterfaceType) *interfaceType {
+	return &interfaceType{
 		superType:     f.newSuperType(namePtr, Interface, doc, assign != token.NoPos),
 		InterfaceType: typ,
 	}
 }
 
 // Node returns origin AST node.
-func (i *InterfaceType) Node() ast.Node {
+func (i *interfaceType) Node() ast.Node {
 	return i.InterfaceType
 }
 
 // String returns the formated code block.
-func (i *InterfaceType) String() string {
+func (i *interfaceType) String() string {
 	return joinType(i, i.file)
 }
 
-// StructType represents a struct type.
-type StructType struct {
+// structType represents a struct type.
+type structType struct {
 	*superType
 	*ast.StructType
 	fields []*StructField // sorted by offset
 }
 
-var _ Node = (*StructType)(nil)
-var _ TypeNode = (*StructType)(nil)
+var _ Node = (*structType)(nil)
+var _ TypeNode = (*structType)(nil)
 
 func (f *File) newStructType(namePtr *string, doc *ast.CommentGroup, assign token.Pos,
-	typ *ast.StructType) *StructType {
-	return &StructType{
+	typ *ast.StructType) *structType {
+	return &structType{
 		superType:  f.newSuperType(namePtr, Struct, doc, assign != token.NoPos),
 		StructType: typ,
 	}
 }
 
 // Node returns origin AST node.
-func (s *StructType) Node() ast.Node {
+func (s *structType) Node() ast.Node {
 	return s.StructType
 }
 
 // String returns the formated code block.
-func (s *StructType) String() string {
+func (s *structType) String() string {
 	return joinType(s, s.file)
 }
 
 // NumField returns a struct type's field count.
-func (s *StructType) NumField() int {
+func (s *structType) NumField() int {
 	return len(s.fields)
 }
 
 // Field returns a struct type's i'th field.
 // It panics if the type's Kind is not Struct.
 // It panics if i is not in the range [0, NumField()).
-func (s *StructType) Field(i int) (field *StructField) {
+func (s *structType) Field(i int) (field *StructField) {
 	if i < 0 || i >= len(s.fields) {
 		panic("aster: Field index out of bounds")
 	}
@@ -369,7 +369,7 @@ func (s *StructType) Field(i int) (field *StructField) {
 
 // FieldByName returns the struct field with the given name
 // and a boolean indicating if the field was found.
-func (s *StructType) FieldByName(name string) (field *StructField, found bool) {
+func (s *structType) FieldByName(name string) (field *StructField, found bool) {
 	for _, field := range s.fields {
 		if field.Name() == name {
 			return field, true
@@ -384,7 +384,7 @@ type StructField struct {
 	Tags *StructTag // field tags handler
 }
 
-func (s *StructType) setFields() {
+func (s *structType) setFields() {
 	expandFields(s.StructType.Fields)
 	for _, field := range s.StructType.Fields.List {
 		s.fields = append(s.fields, &StructField{

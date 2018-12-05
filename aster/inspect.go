@@ -225,7 +225,7 @@ func (f *File) collectNodes(singleParsing bool) {
 
 func (f *File) collectFuncs() {
 	collectFuncs := func(n ast.Node) bool {
-		var t *FuncDecl
+		var t *funcNode
 		switch x := n.(type) {
 		case *ast.FuncDecl:
 			var recv *FuncField
@@ -391,7 +391,7 @@ func (f *File) collectStructs() {
 
 func (f *File) setStructFields() {
 	for _, t := range f.Nodes {
-		s, ok := t.(*StructType)
+		s, ok := t.(*structType)
 		if !ok {
 			continue
 		}

@@ -220,49 +220,6 @@ type (
 	}
 )
 
-// FuncField function params or results.
-type FuncField struct {
-	Name     string
-	TypeName string // not contain `*`
-}
-
-//go:generate Stringer -type Kind
-
-// A Kind represents the specific kind of type that a Type represents.
-// The zero Kind is not a valid kind.
-type Kind uint
-
-// Kind enumerate
-const (
-	Invalid Kind = iota
-	Suspense
-	Bool
-	Int
-	Int8
-	Int16
-	Int32
-	Int64
-	Uint
-	Uint8
-	Uint16
-	Uint32
-	Uint64
-	Uintptr
-	Float32
-	Float64
-	Complex64
-	Complex128
-	String
-	Interface
-	Chan
-	Array
-	Slice
-	Map
-	Func
-	Struct
-	Ptr
-)
-
 func getBasicKind(basicName string) (k Kind, found bool) {
 	found = true
 	switch basicName {
@@ -428,18 +385,6 @@ func (s *super) Recv() (*FuncField, bool) {
 		panic("aster: Kind must be aster.Func!")
 	}
 	panic("aster: (TODO) Coming soon!")
-}
-
-// IsFuncNode returns true if b is implementd FuncNode.
-func IsFuncNode(b Node) bool {
-	_, ok := b.(FuncNode)
-	return ok
-}
-
-// IsTypeNode returns true if b is implementd TypeNode.
-func IsTypeNode(b Node) bool {
-	_, ok := b.(TypeNode)
-	return ok
 }
 
 // ------------------------ Type ------------------------

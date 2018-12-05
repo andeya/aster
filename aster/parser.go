@@ -202,10 +202,3 @@ func isVariadic(t *ast.FuncType) bool {
 	}
 	return false
 }
-
-// IsExported reports whether name is an exported Go symbol
-// (that is, whether it begins with an upper-case letter).
-//
-func IsExported(name string) bool {
-	return ast.IsExported(name)
-}
