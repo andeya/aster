@@ -65,8 +65,8 @@ func (f *File) newFuncObject(namePtr *string, doc *ast.CommentGroup,
 
 func (f *funcObject) funcObjectIdentify() {}
 
-// Decl returns the declaration node.
-func (f *funcObject) Decl() ast.Node {
+// objType returns the node that declares the object type.
+func (f *funcObject) objType() ast.Node {
 	return f.node
 }
 
@@ -77,7 +77,7 @@ func (f *funcObject) IsGlobal() bool {
 
 // String returns the formated code block.
 func (f *funcObject) String() string {
-	s, err := f.file.FormatNode(f.Decl())
+	s, err := f.file.FormatNode(f.objType())
 	if err != nil {
 		return fmt.Sprintf("// Formatting error: %s", err.Error())
 	}

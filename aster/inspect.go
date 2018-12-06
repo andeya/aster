@@ -302,7 +302,7 @@ func (f *File) collectFuncs() {
 		default:
 			return true
 		}
-		f.Objects[t.Decl().Pos()] = t
+		f.Objects[t.objType().Pos()] = t
 		return true
 	}
 	ast.Inspect(f.File, collectFuncs)
@@ -325,7 +325,7 @@ func (f *File) collectFuncs() {
 				f.expandFuncFields(fl.Type.Params),
 				f.expandFuncFields(fl.Type.Results),
 			)
-			f.Objects[t.Decl().Pos()] = t
+			f.Objects[t.objType().Pos()] = t
 		}
 	})
 }
@@ -394,7 +394,7 @@ func (f *File) collectTypesOtherThanStruct() {
 				return
 			}
 		}
-		f.Objects[t.Decl().Pos()] = t
+		f.Objects[t.objType().Pos()] = t
 	})
 }
 
@@ -408,7 +408,7 @@ func (f *File) collectStructs() {
 				return true
 			}
 			st := f.newStructType(nil, ast.Var, nil, -1, t)
-			f.Objects[st.Decl().Pos()] = st
+			f.Objects[st.objType().Pos()] = st
 		case *ast.GenDecl:
 			for _, spec := range x.Specs {
 				var assign = token.NoPos
@@ -441,7 +441,7 @@ func (f *File) collectStructs() {
 					continue
 				}
 				st := f.newStructType(structName, objKind, doc, assign, z)
-				f.Objects[st.Decl().Pos()] = st
+				f.Objects[st.objType().Pos()] = st
 			}
 		}
 		return true

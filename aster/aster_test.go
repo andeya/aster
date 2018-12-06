@@ -161,7 +161,7 @@ func TestScope(t *testing.T) {
 	}
 
 	f.Inspect(func(obj aster.Object) bool {
-		t.Logf("ObjKind:%s, Kind:%s, IsGlobal:%v, Decl:%s", obj.ObjKind(), obj.Kind(), obj.IsGlobal(), obj)
+		t.Logf("ObjKind:%s, Kind:%s, IsGlobal:%v, Preview:%s", obj.ObjKind(), obj.Kind(), obj.IsGlobal(), obj)
 		return true
 	})
 }

@@ -117,8 +117,8 @@ type (
 type (
 	// CommObjectMethods is the common methods of Object interface.
 	CommObjectMethods interface {
-		// Decl returns the declaration node.
-		Decl() ast.Node
+		// objType returns the node that declares the object type.
+		objType() ast.Node
 
 		// Name returns the type's name within its package for a defined type.
 		// For other (non-defined) types it returns the empty string.

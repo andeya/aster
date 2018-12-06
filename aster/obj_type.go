@@ -156,8 +156,8 @@ func (f *File) newAliasType(namePtr *string, doc *ast.CommentGroup, assign token
 	}
 }
 
-// Decl returns the declaration node.
-func (a *aliasType) Decl() ast.Node {
+// objType returns the node that declares the object type.
+func (a *aliasType) objType() ast.Node {
 	return a.Expr
 }
 
@@ -197,8 +197,8 @@ func (f *File) newBasicOrAliasType(namePtr *string, doc *ast.CommentGroup, assig
 	return f.newAliasType(namePtr, doc, assign, typ)
 }
 
-// Decl returns the declaration node.
-func (b *basicType) Decl() ast.Node {
+// objType returns the node that declares the object type.
+func (b *basicType) objType() ast.Node {
 	return b.Expr
 }
 
@@ -228,8 +228,8 @@ func (f *File) newListType(namePtr *string, doc *ast.CommentGroup, assign token.
 	}
 }
 
-// Decl returns the declaration node.
-func (l *listType) Decl() ast.Node {
+// objType returns the node that declares the object type.
+func (l *listType) objType() ast.Node {
 	return l.ArrayType
 }
 
@@ -265,8 +265,8 @@ func (f *File) newMapType(namePtr *string, doc *ast.CommentGroup, assign token.P
 	}
 }
 
-// Decl returns the declaration node.
-func (m *mapType) Decl() ast.Node {
+// objType returns the node that declares the object type.
+func (m *mapType) objType() ast.Node {
 	return m.MapType
 }
 
@@ -292,8 +292,8 @@ func (f *File) newChanType(namePtr *string, doc *ast.CommentGroup, assign token.
 	}
 }
 
-// Decl returns the declaration node.
-func (c *chanType) Decl() ast.Node {
+// objType returns the node that declares the object type.
+func (c *chanType) objType() ast.Node {
 	return c.ChanType
 }
 
@@ -324,8 +324,8 @@ func (f *File) newInterfaceType(namePtr *string, doc *ast.CommentGroup, assign t
 	}
 }
 
-// Decl returns the declaration node.
-func (i *interfaceType) Decl() ast.Node {
+// objType returns the node that declares the object type.
+func (i *interfaceType) objType() ast.Node {
 	return i.InterfaceType
 }
 
@@ -353,8 +353,8 @@ func (f *File) newStructType(namePtr *string, objKind ast.ObjKind, doc *ast.Comm
 	}
 }
 
-// Decl returns the declaration node.
-func (s *structType) Decl() ast.Node {
+// objType returns the node that declares the object type.
+func (s *structType) objType() ast.Node {
 	return s.StructType
 }
 
@@ -556,7 +556,7 @@ func (s *StructTag) String() string {
 }
 
 func joinType(obj Object, file *File) string {
-	s, err := file.FormatNode(obj.Decl())
+	s, err := file.FormatNode(obj.objType())
 	if err != nil {
 		return fmt.Sprintf("// Formatting error: %s", err.Error())
 	}
