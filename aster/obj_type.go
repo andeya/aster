@@ -560,7 +560,7 @@ func joinType(obj Object, file *File) string {
 	if err != nil {
 		return fmt.Sprintf("// Formatting error: %s", err.Error())
 	}
-	doc := obj.Doc()
+	var doc = obj.Doc()
 	if doc != "" {
 		doc = "// " + doc
 	}
@@ -568,8 +568,12 @@ func joinType(obj Object, file *File) string {
 	if obj.IsAssign() {
 		assign = "= "
 	}
-	if obj.ObjKind() == ast.Var {
-		return "var " + obj.Name() + " " + assign + s
+	var name = obj.Name()
+	if name == "" {
+		name = "_"
 	}
-	return doc + "type " + obj.Name() + " " + assign + s
+	if obj.ObjKind() == ast.Var {
+		return "var " + name + " " + assign + s
+	}
+	return doc + "type " + name + " " + assign + s
 }

@@ -84,12 +84,15 @@ func (f *funcObject) String() string {
 	if f.ObjKind() == ast.Fun {
 		return s
 	}
-	s = "var " + f.Name() + " = " + s
-	doc := f.Doc()
+	var doc = f.Doc()
 	if doc != "" {
-		s = "// " + doc + s
+		doc = "// " + doc
 	}
-	return s
+	var name = f.Name()
+	if name == "" {
+		name = "_"
+	}
+	return doc + "var " + name + " = " + s
 }
 
 // NumParam returns a function type's input parameter count.
