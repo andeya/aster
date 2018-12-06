@@ -15,6 +15,7 @@
 package aster
 
 import (
+	"errors"
 	"fmt"
 	"go/ast"
 	"go/parser"
@@ -27,13 +28,18 @@ import (
 
 // A Program is a Go program loaded from source.
 type Program struct {
+	// initial
+	conf         loader.Config
+	initialError error // first error for initial
+	initiated    bool
+
 	// Fset the file set for this program
 	Fset *token.FileSet
 
 	// Created[i] contains the initial package whose ASTs or
 	// filenames were supplied by AddFiles() and MustAddFiles(), followed by
 	// the external test package, if any, of each package in
-	// Imports() and ImportWithTests() ordered by ImportPath.
+	// Import() and ImportWithTests() ordered by ImportPath.
 	//
 	// NOTE: these files must not import "C".  Cgo preprocessing is
 	// only performed on imported packages, not ad hoc packages.
@@ -46,7 +52,7 @@ type Program struct {
 	Created []*PackageInfo
 
 	// Imported contains the initially imported packages,
-	// as specified by Imports() and ImportWithTests().
+	// as specified by Import() and ImportWithTests().
 	Imported map[string]*PackageInfo
 
 	// AllPackages contains the PackageInfo of every package
@@ -69,28 +75,54 @@ type PackageInfo struct {
 	types.Info                        // type-checker deductions.
 }
 
-// Loader loading a whole program from Go source code.
-type Loader struct {
-	conf loader.Config
+// LoadFile parses the source code of a single Go file and loads a new program.
+//
+// src specifies the parser input as a string, []byte, or io.Reader, and
+// filename is its apparent name.  If src is nil, the contents of
+// filename are read from the file system.
+//
+func LoadFile(filename string, src interface{}) (*Program, error) {
+	return NewProgram().AddFile(filename, src).Load()
 }
 
-// NewLoader creates a loader.
-func NewLoader(mode ...parser.Mode) *Loader {
-	loader := new(Loader)
-	loader.conf.ParserMode = parser.ParseComments
-	for _, m := range mode {
-		loader.conf.ParserMode |= m
-	}
+// LoadPkgs imports packages and loads a new program.
+//
+// the set of initial source packages located relative to $GOPATH.
+//
+func LoadPkgs(pkgPath ...string) (*Program, error) {
+	return NewProgram().Import(pkgPath...).Load()
+}
+
+// LoadPkgsWithTests imports packages and loads a new program.
+//
+// the set of initial source packages located relative to $GOPATH.
+//
+// The package will be augmented by any *_test.go files in
+// its directory that contain a "package x" (not "package x_test")
+// declaration.
+//
+// In addition, if any *_test.go files contain a "package x_test"
+// declaration, an additional package comprising just those files will
+// be added to CreatePkgs.
+//
+func LoadPkgsWithTests(pkgPath ...string) (*Program, error) {
+	return NewProgram().ImportWithTests(pkgPath...).Load()
+}
+
+// NewProgram creates a empty program.
+func NewProgram() *Program {
+	prog := new(Program)
+	prog.conf.ParserMode = parser.ParseComments
 	// Optimization: don't type-check the bodies of functions in our
 	// dependencies, since we only need exported package members.
-	loader.conf.TypeCheckFuncBodies = func(p string) bool {
+	prog.conf.TypeCheckFuncBodies = func(p string) bool {
 		pp := strings.TrimSuffix(p, "_test")
-		for _, cp := range loader.conf.CreatePkgs {
+		for _, cp := range prog.conf.CreatePkgs {
 			if cp.Path == p || cp.Path == pp {
 				return true
 			}
 		}
-		for k := range loader.conf.ImportPkgs {
+		for k := range prog.conf.ImportPkgs {
 			if k == p || k == pp {
 				return true
 			}
@@ -102,8 +134,8 @@ func NewLoader(mode ...parser.Mode) *Loader {
 	// As a workaround, we set AllowErrors=true and then duplicate
 	// the loader's error checking but allow soft errors.
 	// It would be nice if the loader API permitted "AllowErrors: soft".
-	loader.conf.AllowErrors = true
-	return loader
+	prog.conf.AllowErrors = true
+	return prog
 }
 
 // AddFile parses the source code of a single Go source file.
@@ -112,31 +144,27 @@ func NewLoader(mode ...parser.Mode) *Loader {
 // filename is its apparent name.  If src is nil, the contents of
 // filename are read from the file system.
 //
-func (l *Loader) AddFile(filename string, src interface{}) error {
-	f, err := l.conf.ParseFile(filename, src)
-	if err != nil {
-		return err
+func (prog *Program) AddFile(filename string, src interface{}) (itself *Program) {
+	if !prog.initiated && prog.initialError == nil {
+		f, err := prog.conf.ParseFile(filename, src)
+		if err != nil {
+			prog.initialError = err
+		} else {
+			prog.conf.CreateFromFiles(f.Name.Name, f)
+		}
 	}
-	l.conf.CreateFromFiles(f.Name.Name, f)
-	return nil
+	return prog
 }
 
-// MustAddFile is similar to AddFile, but panic when existing error.
-func (l *Loader) MustAddFile(filename string, src interface{}) *Loader {
-	err := l.AddFile(filename, src)
-	if err != nil {
-		panic(err)
-	}
-	return l
-}
-
-// Imports imports packages that will be imported from source,
+// Import imports packages that will be imported from source,
 // the set of initial source packages located relative to $GOPATH.
-func (l *Loader) Imports(pkgPath ...string) *Loader {
-	for _, p := range pkgPath {
-		l.conf.Import(p)
+func (prog *Program) Import(pkgPath ...string) (itself *Program) {
+	if !prog.initiated && prog.initialError == nil {
+		for _, p := range pkgPath {
+			prog.conf.Import(p)
+		}
 	}
-	return l
+	return prog
 }
 
 // ImportWithTests imports packages that will be imported from source,
@@ -149,30 +177,38 @@ func (l *Loader) Imports(pkgPath ...string) *Loader {
 // declaration, an additional package comprising just those files will
 // be added to CreatePkgs.
 //
-func (l *Loader) ImportWithTests(pkgPath ...string) *Loader {
-	for _, p := range pkgPath {
-		l.conf.ImportWithTests(p)
+func (prog *Program) ImportWithTests(pkgPath ...string) (itself *Program) {
+	if !prog.initiated && prog.initialError == nil {
+		for _, p := range pkgPath {
+			prog.conf.ImportWithTests(p)
+		}
 	}
-	return l
+	return prog
 }
 
-// Load creates the initial packages specified by conf.{Create,Import}Pkgs,
-// loading their dependencies packages as needed.
+// Load loads the program's packages,
+// and loads their dependencies packages as needed.
 //
-// On success, Load returns a Program containing a PackageInfo for
-// each package.  On failure, it returns an error.
-//
+// On failure, returns an error.
 // It is an error if no packages were loaded.
 //
-func (l *Loader) Load() (prog *Program, err error) {
+func (prog *Program) Load() (itself *Program, err error) {
+	if prog.initiated {
+		return prog, errors.New("can not load two times")
+	}
+	if prog.initialError != nil {
+		return prog, prog.initialError
+	}
+	prog.initiated = true
 	defer func() {
 		if p := recover(); p != nil {
-			err = fmt.Errorf("%v", p)
+			prog.initialError = fmt.Errorf("%v", p)
 		}
 	}()
-	p, err := l.conf.Load()
+	p, err := prog.conf.Load()
 	if err != nil {
-		return nil, err
+		prog.initialError = err
+		return prog, prog.initialError
 	}
 	var errpkgs []string
 	// Report hard errors in indirectly imported packages.
@@ -187,10 +223,20 @@ func (l *Loader) Load() (prog *Program, err error) {
 			more = fmt.Sprintf(" and %d more", len(errpkgs)-3)
 			errpkgs = errpkgs[:3]
 		}
-		return nil, fmt.Errorf("couldn't load packages due to errors: %s%s",
+		prog.initialError = fmt.Errorf("couldn't load packages due to errors: %s%s",
 			strings.Join(errpkgs, ", "), more)
+		return prog, prog.initialError
 	}
-	return newProgram(p), nil
+	return prog.bind(p), prog.initialError
+}
+
+// MustLoad is the same as Load(), but panic when error occur.
+func (prog *Program) MustLoad() (itself *Program) {
+	_, err := prog.Load()
+	if err != nil {
+		panic(err)
+	}
+	return prog
 }
 
 func containsHardErrors(errors []error) bool {
@@ -203,43 +249,32 @@ func containsHardErrors(errors []error) bool {
 	return false
 }
 
-// MustLoad is similar to Load, but panic when existing error.
-func (l *Loader) MustLoad() *Program {
-	p, err := l.Load()
-	if err != nil {
-		panic(err)
-	}
-	return p
-}
+func (prog *Program) bind(p *loader.Program) (itself *Program) {
+	prog.Fset = p.Fset
+	prog.Imported = make(map[string]*PackageInfo, len(prog.Imported))
+	prog.AllPackages = make(map[*types.Package]*PackageInfo, len(prog.AllPackages))
 
-// newProgram creates a program object.
-func newProgram(prog *loader.Program) *Program {
-	p := &Program{
-		Fset:        prog.Fset,
-		Imported:    make(map[string]*PackageInfo, len(prog.Imported)),
-		AllPackages: make(map[*types.Package]*PackageInfo, len(prog.AllPackages)),
+	var solved = make(map[*loader.PackageInfo]*PackageInfo, len(p.AllPackages))
+	for _, info := range p.Created {
+		newInfo := newPackageInfo(info)
+		solved[info] = newInfo
+		prog.Created = append(prog.Created, newInfo)
 	}
-	var solved = make(map[*loader.PackageInfo]*PackageInfo, len(prog.AllPackages))
-	for _, pkg := range prog.Created {
-		newPkg := newPackageInfo(pkg)
-		solved[pkg] = newPkg
-		p.Created = append(p.Created, newPkg)
+	for k, info := range p.Imported {
+		newInfo := newPackageInfo(info)
+		solved[info] = newInfo
+		prog.Imported[k] = newInfo
 	}
-	for k, pkg := range prog.Imported {
-		newPkg := newPackageInfo(pkg)
-		solved[pkg] = newPkg
-		p.Imported[k] = newPkg
-	}
-	for k, pkg := range prog.AllPackages {
-		if newPkg, ok := solved[pkg]; ok {
-			p.AllPackages[k] = newPkg
+	for k, info := range p.AllPackages {
+		if newInfo, ok := solved[info]; ok {
+			prog.AllPackages[k] = newInfo
 		} else {
-			newPkg := newPackageInfo(pkg)
-			solved[pkg] = newPkg
-			p.AllPackages[k] = newPkg
+			newInfo := newPackageInfo(info)
+			solved[info] = newInfo
+			prog.AllPackages[k] = newInfo
 		}
 	}
-	return p
+	return prog
 }
 
 // newPackageInfo creates a package info.
@@ -254,16 +289,27 @@ func newPackageInfo(pkg *loader.PackageInfo) *PackageInfo {
 	}
 }
 
+// InitialPackages returns a new slice containing the set of initial
+// packages (Created + Imported) in unspecified order.
+func (prog *Program) InitialPackages() []*PackageInfo {
+	infos := make([]*PackageInfo, 0, len(prog.Created)+len(prog.Imported))
+	infos = append(infos, prog.Created...)
+	for _, info := range prog.Imported {
+		infos = append(infos, info)
+	}
+	return infos
+}
+
 // Package returns the ASTs and results of type checking for the
 // specified package.
 // NOTE: return nil, if the package does not exist.
-func (p *Program) Package(path string) *PackageInfo {
-	for k, v := range p.AllPackages {
+func (prog *Program) Package(path string) *PackageInfo {
+	for k, v := range prog.AllPackages {
 		if k.Path() == path {
 			return v
 		}
 	}
-	for _, info := range p.Created {
+	for _, info := range prog.Created {
 		if path == info.Pkg.Path() {
 			return info
 		}
@@ -273,15 +319,4 @@ func (p *Program) Package(path string) *PackageInfo {
 
 func (p *PackageInfo) String() string {
 	return p.Pkg.Path()
-}
-
-// InitialPackages returns a new slice containing the set of initial
-// packages (Created + Imported) in unspecified order.
-func (p *Program) InitialPackages() []*PackageInfo {
-	infos := make([]*PackageInfo, 0, len(p.Created)+len(p.Imported))
-	infos = append(infos, p.Created...)
-	for _, info := range p.Imported {
-		infos = append(infos, info)
-	}
-	return infos
 }

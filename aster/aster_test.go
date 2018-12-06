@@ -155,7 +155,11 @@ func TestScope(t *testing.T) {
 		S2
 	)
 `
-	prog := aster.NewLoader().MustAddFile("../_out/func1.go", src).MustLoad()
+	prog, err := aster.LoadFile("../_out/func1.go", src)
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	printProgram(prog)
 	pkgInfo := prog.Package("test")
 	t.Logf("%#v", pkgInfo.Info)
