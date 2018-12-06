@@ -20,6 +20,7 @@ import (
 	"go/parser"
 	"go/token"
 	"go/types"
+	"strings"
 
 	"golang.org/x/tools/go/loader"
 )
@@ -77,10 +78,31 @@ type Loader struct {
 func NewLoader(mode ...parser.Mode) *Loader {
 	loader := new(Loader)
 	loader.conf.ParserMode = parser.ParseComments
-	loader.conf.AllowErrors = true
 	for _, m := range mode {
 		loader.conf.ParserMode |= m
 	}
+	// Optimization: don't type-check the bodies of functions in our
+	// dependencies, since we only need exported package members.
+	loader.conf.TypeCheckFuncBodies = func(p string) bool {
+		pp := strings.TrimSuffix(p, "_test")
+		for _, cp := range loader.conf.CreatePkgs {
+			if cp.Path == p || cp.Path == pp {
+				return true
+			}
+		}
+		for k := range loader.conf.ImportPkgs {
+			if k == p || k == pp {
+				return true
+			}
+		}
+		return false
+	}
+	// Ideally we would just return conf.Load() here, but go/types
+	// reports certain "soft" errors that gc does not (Go issue 14596).
+	// As a workaround, we set AllowErrors=true and then duplicate
+	// the loader's error checking but allow soft errors.
+	// It would be nice if the loader API permitted "AllowErrors: soft".
+	loader.conf.AllowErrors = true
 	return loader
 }
 
@@ -95,7 +117,7 @@ func (l *Loader) AddFile(filename string, src interface{}) error {
 	if err != nil {
 		return err
 	}
-	l.conf.CreateFromFiles("", f)
+	l.conf.CreateFromFiles(f.Name.Name, f)
 	return nil
 }
 
@@ -140,11 +162,6 @@ func (l *Loader) ImportWithTests(pkgPath ...string) *Loader {
 // On success, Load returns a Program containing a PackageInfo for
 // each package.  On failure, it returns an error.
 //
-// If AllowErrors is true, Load will return a Program even if some
-// packages contained I/O, parser or type errors, or if dependencies
-// were missing.  (Such errors are accessible via PackageInfo.Errors.  If
-// false, Load will fail if any package had an error.
-//
 // It is an error if no packages were loaded.
 //
 func (l *Loader) Load() (prog *Program, err error) {
@@ -157,7 +174,33 @@ func (l *Loader) Load() (prog *Program, err error) {
 	if err != nil {
 		return nil, err
 	}
+	var errpkgs []string
+	// Report hard errors in indirectly imported packages.
+	for _, info := range p.AllPackages {
+		if containsHardErrors(info.Errors) {
+			errpkgs = append(errpkgs, info.Pkg.Path())
+		}
+	}
+	if errpkgs != nil {
+		var more string
+		if len(errpkgs) > 3 {
+			more = fmt.Sprintf(" and %d more", len(errpkgs)-3)
+			errpkgs = errpkgs[:3]
+		}
+		return nil, fmt.Errorf("couldn't load packages due to errors: %s%s",
+			strings.Join(errpkgs, ", "), more)
+	}
 	return newProgram(p), nil
+}
+
+func containsHardErrors(errors []error) bool {
+	for _, err := range errors {
+		if err, ok := err.(types.Error); ok && err.Soft {
+			continue
+		}
+		return true
+	}
+	return false
 }
 
 // MustLoad is similar to Load, but panic when existing error.

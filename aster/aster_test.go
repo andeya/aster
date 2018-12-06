@@ -131,8 +131,8 @@ import (
 
 func TestScope(t *testing.T) {
 	var src = `package test
-	// import "fmt"
-	// var X=fmt.Print
+	import "strings"
+	var X=strings.Replace
 	// S comment
 	type S int
 	// String comment
