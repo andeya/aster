@@ -27,6 +27,12 @@ import (
 type Object interface {
 	// Object returns the types.Object.
 	Object() types.Object
+
+	// ObjKind returns what the Object represents.
+	ObjKind() ObjKind
+
+	TypKind() TypKind
+
 	// Name returns the type's name within its package for a defined type.
 	// For other (non-defined) types it returns the empty string.
 	Name() string
@@ -60,6 +66,58 @@ func (p *PackageInfo) newObject(ident *ast.Ident, obj types.Object) *object {
 // Object returns the types.Object.
 func (obj *object) Object() types.Object {
 	return obj.obj
+}
+
+// ObjKind returns what the Object represents.
+func (obj *object) ObjKind() ObjKind {
+	switch obj.obj.(type) {
+	case *types.PkgName:
+		return Pkg
+	case *types.Const:
+		return Con
+	case *types.TypeName:
+		return Typ
+	case *types.Var:
+		return Var
+	case *types.Func:
+		return Fun
+	case *types.Label:
+		return Lbl
+	case *types.Builtin:
+		return Bui
+	case *types.Nil:
+		return Nil
+	}
+	return Bad
+}
+
+// TypKind returns what the Object type represents.
+func (obj *object) TypKind() TypKind {
+	switch obj.obj.Type().(type) {
+	case *types.Basic:
+		return Basic
+	case *types.Array:
+		return Array
+	case *types.Slice:
+		return Slice
+	case *types.Struct:
+		return Struct
+	case *types.Pointer:
+		return Pointer
+	case *types.Tuple:
+		return Tuple
+	case *types.Signature:
+		return Signature
+	case *types.Interface:
+		return Interface
+	case *types.Map:
+		return Map
+	case *types.Chan:
+		return Chan
+	case *types.Named:
+		return Named
+	}
+	return Invalid
 }
 
 // Name returns the type's name within its package for a defined type.
@@ -105,4 +163,8 @@ func (p *PackageInfo) addFunc(ident *ast.Ident, fn *types.Func) {
 		typesFunc: fn,
 	}
 	p.objects[ident.Pos()] = fun
+}
+
+func (f *Func) IsMethod() bool {
+	return f.typesFunc.Type().(*types.Signature).Recv() != nil
 }
