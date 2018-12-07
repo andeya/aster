@@ -57,6 +57,8 @@ type Program struct {
 	// dependencies, including incomplete ones.
 	AllPackages map[*types.Package]*PackageInfo
 
+	filenames map[*ast.File]string
+
 	// We use token.File, not filename, since a file may appear to
 	// belong to multiple packages and be parsed more than once.
 	// token.File captures this distinction; filename does not.
@@ -100,7 +102,8 @@ func LoadPkgsWithTests(pkgPath ...string) (*Program, error) {
 // NewProgram creates a empty program.
 func NewProgram() *Program {
 	prog := new(Program)
-	prog.filesToUpdate = make(map[*token.File]bool)
+	prog.filenames = make(map[*ast.File]string, 128)
+	prog.filesToUpdate = make(map[*token.File]bool, 128)
 	prog.conf.ParserMode = parser.ParseComments
 	// Optimization: don't type-check the bodies of functions in our
 	// dependencies, since we only need exported package members.
@@ -133,12 +136,19 @@ func NewProgram() *Program {
 // filename is its apparent name.  If src is nil, the contents of
 // filename are read from the file system.
 //
+// filename is used to rewrite to local file;
+// if empty, rewrite to self-increasing number filename under the package name path.
+//
 func (prog *Program) AddFile(filename string, src interface{}) (itself *Program) {
 	if !prog.initiated && prog.initialError == nil {
 		f, err := prog.conf.ParseFile(filename, src)
 		if err != nil {
 			prog.initialError = err
 		} else {
+			if filename == "" {
+				filename = autoFilename(f)
+			}
+			prog.filenames[f] = filename
 			prog.conf.CreateFromFiles(f.Name.Name, f)
 		}
 	}

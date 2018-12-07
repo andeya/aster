@@ -39,6 +39,12 @@ type PackageInfo struct {
 	objects               map[token.Pos]interface{}
 }
 
+// A File node represents a Go source file.
+type File struct {
+	*ast.File
+	Filename string
+}
+
 // newPackageInfo creates a package info.
 func newPackageInfo(prog *Program, pkg *loader.PackageInfo) *PackageInfo {
 	return &PackageInfo{

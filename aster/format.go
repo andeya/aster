@@ -34,7 +34,7 @@ func (p *PackageInfo) Format() (codes map[string]string, first error) {
 		if first != nil {
 			return
 		}
-		codes[f.Name.String()] = code
+		codes[p.prog.filenames[f]] = code
 	}
 	return
 }

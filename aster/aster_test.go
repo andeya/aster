@@ -161,10 +161,11 @@ func TestScope(t *testing.T) {
 	}
 
 	printProgram(prog)
-	pkgInfo := prog.Package("test")
-	t.Logf("%#v", pkgInfo.Info)
-	t.Log(pkgInfo)
-	t.Log(pkgInfo.Format())
+	pkg := prog.Package("test")
+	t.Logf("%#v", pkg.Info)
+	t.Log(pkg)
+	t.Log(pkg.Format())
+	pkg.Rewrite()
 }
 
 func printProgram(prog *aster.Program) {

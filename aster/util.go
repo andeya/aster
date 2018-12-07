@@ -12,11 +12,20 @@ import (
 	"path/filepath"
 	"reflect"
 	"runtime"
+	"strconv"
 	"strings"
+	"sync/atomic"
 	"unicode"
 
 	"golang.org/x/tools/go/ast/astutil"
 )
+
+var filenameID int32
+
+func autoFilename(f *ast.File) string {
+	id := strconv.Itoa(int(atomic.AddInt32(&filenameID, 1)))
+	return f.Name.Name + "/" + id + ".go"
+}
 
 func objectKind(obj types.Object) string {
 	switch obj := obj.(type) {
