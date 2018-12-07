@@ -116,3 +116,17 @@ func (p *PackageInfo) DocComment(id *ast.Ident) *ast.CommentGroup {
 	}
 	return nil
 }
+
+// PreviewObject previews the object formated code and comment.
+func (p *PackageInfo) PreviewObject(ident *ast.Ident) string {
+	nodes, _ := p.PathEnclosingInterval(ident.Pos(), ident.End())
+	for _, node := range nodes {
+		switch decl := node.(type) {
+		case *ast.FuncDecl, *ast.GenDecl, *ast.AssignStmt:
+			return textOrError(p.FormatNode(decl))
+		case *ast.File:
+			return "package " + ident.String()
+		}
+	}
+	return "// aster: can not preview " + ident.String()
+}

@@ -135,9 +135,9 @@ func TestScope(t *testing.T) {
 	var err=errors.New("")
 	// S comment
 	type S int
-	// String comment
+	// String comment1
+	// String comment2
 	func(s *S)String()string {return ""}
-	// F1 comment
 	func F1(i int){a:=func(){}}
 	// F2 FuncLit!
 	var F2=func()int{

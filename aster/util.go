@@ -20,6 +20,13 @@ import (
 	"golang.org/x/tools/go/ast/astutil"
 )
 
+func textOrError(text string, err error) string {
+	if err == nil {
+		return text
+	}
+	return "// aster: " + err.Error()
+}
+
 var filenameID int32
 
 func autoFilename(f *ast.File) string {
