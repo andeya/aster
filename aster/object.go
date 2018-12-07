@@ -15,6 +15,7 @@
 package aster
 
 import (
+	"go/ast"
 	"go/types"
 )
 
@@ -23,4 +24,13 @@ import (
 // An abstract method may belong to many interfaces due to embedding.
 type Func struct {
 	*types.Func
+	doc *ast.CommentGroup
+}
+
+func (p *PackageInfo) addFunc(ident *ast.Ident, fn *types.Func) {
+	fun := &Func{
+		Func: fn,
+		doc:  p.DocComment(ident),
+	}
+	p.objects[ident.Pos()] = fun
 }

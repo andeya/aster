@@ -36,6 +36,7 @@ type PackageInfo struct {
 	Files                 []*ast.File // syntax trees for the package's files
 	Errors                []error     // non-nil if the package had errors
 	types.Info                        // type-checker deductions.
+	objects               map[token.Pos]interface{}
 }
 
 // newPackageInfo creates a package info.
@@ -48,6 +49,7 @@ func newPackageInfo(prog *Program, pkg *loader.PackageInfo) *PackageInfo {
 		Errors:                pkg.Errors,
 		Info:                  pkg.Info,
 		prog:                  prog,
+		objects:               make(map[token.Pos]interface{}, 128),
 	}
 }
 
