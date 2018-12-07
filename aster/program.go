@@ -216,7 +216,7 @@ func (prog *Program) Load() (itself *Program, err error) {
 			strings.Join(errpkgs, ", "), more)
 		return prog, prog.initialError
 	}
-	return prog.bind(p), prog.initialError
+	return prog.convert(p), prog.initialError
 }
 
 // MustLoad is the same as Load(), but panic when error occur.
@@ -228,7 +228,7 @@ func (prog *Program) MustLoad() (itself *Program) {
 	return prog
 }
 
-func (prog *Program) bind(p *loader.Program) (itself *Program) {
+func (prog *Program) convert(p *loader.Program) (itself *Program) {
 	prog.Fset = p.Fset
 	prog.Imported = make(map[string]*PackageInfo, len(prog.Imported))
 	prog.AllPackages = make(map[*types.Package]*PackageInfo, len(prog.AllPackages))
@@ -253,18 +253,25 @@ func (prog *Program) bind(p *loader.Program) (itself *Program) {
 			prog.AllPackages[k] = newInfo
 		}
 	}
+	prog.check()
 	return prog
+}
+
+func (prog *Program) check() {
+	for _, pkg := range prog.InitialPackages() {
+		pkg.check()
+	}
 }
 
 // InitialPackages returns a new slice containing the set of initial
 // packages (Created + Imported) in unspecified order.
 func (prog *Program) InitialPackages() []*PackageInfo {
-	infos := make([]*PackageInfo, 0, len(prog.Created)+len(prog.Imported))
-	infos = append(infos, prog.Created...)
-	for _, info := range prog.Imported {
-		infos = append(infos, info)
+	pkgs := make([]*PackageInfo, 0, len(prog.Created)+len(prog.Imported))
+	pkgs = append(pkgs, prog.Created...)
+	for _, pkg := range prog.Imported {
+		pkgs = append(pkgs, pkg)
 	}
-	return infos
+	return pkgs
 }
 
 // Package returns the ASTs and results of type checking for the
