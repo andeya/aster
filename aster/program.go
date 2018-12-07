@@ -37,22 +37,18 @@ type Program struct {
 	Fset *token.FileSet
 
 	// Created[i] contains the initial package whose ASTs or
-	// filenames were supplied by AddFiles() and MustAddFiles(), followed by
-	// the external test package, if any, of each package in
-	// Import() and ImportWithTests() ordered by ImportPath.
+	// filenames were supplied by AddFiles(), MustAddFiles()
+	// and LoadFile() followed by the external test package,
+	// if any, of each package in Import(), ImportWithTests(),
+	// LoadPkgs and LoadPkgsWithTests() ordered by ImportPath.
 	//
 	// NOTE: these files must not import "C".  Cgo preprocessing is
 	// only performed on imported packages, not ad hoc packages.
 	//
-	// TODO(adonovan): we need to copy and adapt the logic of
-	// goFilesPackage (from $GOROOT/src/cmd/go/build.go) and make
-	// Config.Import and Config.Create methods return the same kind
-	// of entity, essentially a build.Package.
-	// Perhaps we can even reuse that type directly.
 	Created []*PackageInfo
 
 	// Imported contains the initially imported packages,
-	// as specified by Import() and ImportWithTests().
+	// as specified by Import(), ImportWithTests(), LoadPkgs and LoadPkgsWithTests().
 	Imported map[string]*PackageInfo
 
 	// AllPackages contains the PackageInfo of every package
