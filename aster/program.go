@@ -1,3 +1,5 @@
+// Package aster is golang coding efficiency engine.
+//
 // Copyright 2018 henrylee2cn. All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -11,7 +13,6 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-
 package aster
 
 import (
@@ -55,20 +56,11 @@ type Program struct {
 	// encountered by Load: all initial packages and all
 	// dependencies, including incomplete ones.
 	AllPackages map[*types.Package]*PackageInfo
-}
 
-// PackageInfo holds the ASTs and facts derived by the type-checker
-// for a single package.
-//
-// Not mutated once exposed via the API.
-//
-type PackageInfo struct {
-	Pkg                   *types.Package
-	Importable            bool        // true if 'import "Pkg.Path()"' would resolve to this
-	TransitivelyErrorFree bool        // true if Pkg and all its dependencies are free of errors
-	Files                 []*ast.File // syntax trees for the package's files
-	Errors                []error     // non-nil if the package had errors
-	types.Info                        // type-checker deductions.
+	// We use token.File, not filename, since a file may appear to
+	// belong to multiple packages and be parsed more than once.
+	// token.File captures this distinction; filename does not.
+	filesToUpdate map[*token.File]bool
 }
 
 // LoadFile parses the source code of a single Go file and loads a new program.
@@ -108,6 +100,7 @@ func LoadPkgsWithTests(pkgPath ...string) (*Program, error) {
 // NewProgram creates a empty program.
 func NewProgram() *Program {
 	prog := new(Program)
+	prog.filesToUpdate = make(map[*token.File]bool)
 	prog.conf.ParserMode = parser.ParseComments
 	// Optimization: don't type-check the bodies of functions in our
 	// dependencies, since we only need exported package members.
@@ -235,16 +228,6 @@ func (prog *Program) MustLoad() (itself *Program) {
 	return prog
 }
 
-func containsHardErrors(errors []error) bool {
-	for _, err := range errors {
-		if err, ok := err.(types.Error); ok && err.Soft {
-			continue
-		}
-		return true
-	}
-	return false
-}
-
 func (prog *Program) bind(p *loader.Program) (itself *Program) {
 	prog.Fset = p.Fset
 	prog.Imported = make(map[string]*PackageInfo, len(prog.Imported))
@@ -252,12 +235,12 @@ func (prog *Program) bind(p *loader.Program) (itself *Program) {
 
 	var solved = make(map[*loader.PackageInfo]*PackageInfo, len(p.AllPackages))
 	for _, info := range p.Created {
-		newInfo := newPackageInfo(info)
+		newInfo := newPackageInfo(prog, info)
 		solved[info] = newInfo
 		prog.Created = append(prog.Created, newInfo)
 	}
 	for k, info := range p.Imported {
-		newInfo := newPackageInfo(info)
+		newInfo := newPackageInfo(prog, info)
 		solved[info] = newInfo
 		prog.Imported[k] = newInfo
 	}
@@ -265,24 +248,12 @@ func (prog *Program) bind(p *loader.Program) (itself *Program) {
 		if newInfo, ok := solved[info]; ok {
 			prog.AllPackages[k] = newInfo
 		} else {
-			newInfo := newPackageInfo(info)
+			newInfo := newPackageInfo(prog, info)
 			solved[info] = newInfo
 			prog.AllPackages[k] = newInfo
 		}
 	}
 	return prog
-}
-
-// newPackageInfo creates a package info.
-func newPackageInfo(pkg *loader.PackageInfo) *PackageInfo {
-	return &PackageInfo{
-		Pkg:                   pkg.Pkg,
-		Importable:            pkg.Importable,
-		TransitivelyErrorFree: pkg.TransitivelyErrorFree,
-		Files:                 pkg.Files,
-		Errors:                pkg.Errors,
-		Info:                  pkg.Info,
-	}
 }
 
 // InitialPackages returns a new slice containing the set of initial
@@ -313,6 +284,35 @@ func (prog *Program) Package(path string) *PackageInfo {
 	return nil
 }
 
-func (p *PackageInfo) String() string {
-	return p.Pkg.Path()
+// PathEnclosingInterval returns the PackageInfo and ast.Node that
+// contain source interval [start, end), and all the node's ancestors
+// up to the AST root.  It searches all ast.Files of all packages in prog.
+// exact is defined as for astutil.PathEnclosingInterval.
+//
+// The zero value is returned if not found.
+//
+func (prog *Program) PathEnclosingInterval(start, end token.Pos) (pkg *PackageInfo, path []ast.Node, exact bool) {
+	for _, pkg = range prog.AllPackages {
+		path, exact = pkg.PathEnclosingInterval(start, end)
+		if path != nil {
+			return
+		}
+	}
+	return nil, nil, false
+}
+
+func containsHardErrors(errors []error) bool {
+	for _, err := range errors {
+		if err, ok := err.(types.Error); ok && err.Soft {
+			continue
+		}
+		return true
+	}
+	return false
+}
+
+func tokenFileContainsPos(f *token.File, pos token.Pos) bool {
+	p := int(pos)
+	base := f.Base()
+	return base <= p && p < base+f.Size()
 }
