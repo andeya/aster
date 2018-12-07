@@ -15,21 +15,34 @@
 package aster
 
 import (
-	"go/types"
+	"go/ast"
 	"log"
 )
 
 func (p *PackageInfo) check() {
 	log.Printf("Checking package %s...", p.String())
-	p.inspectFunc()
+L:
+	for ident, obj := range p.Defs {
+		switch GetObjKind(obj) {
+		case Bad, Lbl, Bui, Nil:
+			continue
+		case Var:
+			nodes, _ := p.PathEnclosingInterval(ident.Pos(), ident.End())
+			for _, n := range nodes {
+				if _, ok := n.(*ast.Field); ok {
+					continue L
+				}
+			}
+		}
+		p.addAster(ident, obj)
+	}
 }
 
-func (p *PackageInfo) inspectFunc() {
-	for ident, obj := range p.Defs {
-		fn, ok := obj.(*types.Func)
-		if !ok {
-			continue
+// Inspect traverses asters in the package.
+func (p *PackageInfo) Inspect(fn func(*Aster) bool) {
+	for _, obj := range p.asters {
+		if !fn(obj) {
+			return
 		}
-		p.addFunc(ident, fn)
 	}
 }

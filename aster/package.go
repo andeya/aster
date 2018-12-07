@@ -36,7 +36,7 @@ type PackageInfo struct {
 	Files                 []*ast.File // syntax trees for the package's files
 	Errors                []error     // non-nil if the package had errors
 	types.Info                        // type-checker deductions.
-	objects               map[token.Pos]interface{}
+	asters                []*Aster
 }
 
 // A File node represents a Go source file.
@@ -55,7 +55,6 @@ func newPackageInfo(prog *Program, pkg *loader.PackageInfo) *PackageInfo {
 		Errors:                pkg.Errors,
 		Info:                  pkg.Info,
 		prog:                  prog,
-		objects:               make(map[token.Pos]interface{}, 128),
 	}
 }
 
@@ -117,8 +116,8 @@ func (p *PackageInfo) DocComment(id *ast.Ident) *ast.CommentGroup {
 	return nil
 }
 
-// PreviewObject previews the object formated code and comment.
-func (p *PackageInfo) PreviewObject(ident *ast.Ident) string {
+// Preview previews the formated code and comment.
+func (p *PackageInfo) Preview(ident *ast.Ident) string {
 	nodes, _ := p.PathEnclosingInterval(ident.Pos(), ident.End())
 	for _, node := range nodes {
 		switch decl := node.(type) {

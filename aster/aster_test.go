@@ -9,6 +9,50 @@ import (
 	"github.com/henrylee2cn/aster/aster"
 )
 
+func TestInspect(t *testing.T) {
+	var src = `// Package test for aster
+package test
+	import "errors"
+	var err=errors.New("")
+	// S comment
+	type S int
+	// String comment1
+	// String comment2
+	func(s S)String()string {return ""}
+	func F1(i int){a:=func(){}}
+	// F2 FuncLit!
+	var F2=func()int{
+		type G1 string
+		var v = struct{}{}
+		_=v
+		return 0
+	}
+	// H1 comment
+	var H1 = struct{}{}
+	// H2 comment
+	type H2 = struct{}
+	const (
+		S1 S = iota
+		S2
+	)
+`
+	prog, err := aster.LoadFile("../_out/func1.go", src)
+	if err != nil {
+		t.Fatal(err)
+	}
+	printProgram(prog)
+	pkg := prog.Package("test")
+	var log string
+	pkg.Inspect(func(a *aster.Aster) bool {
+		log += fmt.Sprintf(
+			"\nObjKind: %s\nTypKind: %s\nDoc: %sPreview:\n%s\nObj:\n%s\n",
+			a.ObjKind(), a.TypKind(), a.Doc(), a, a.Object(),
+		)
+		return true
+	})
+	t.Log(log)
+}
+
 // func TestStruct(t *testing.T) {
 // 	var src = `package test
 // // S comment
@@ -128,45 +172,6 @@ import (
 // 		return true
 // 	})
 // }
-
-func TestScope(t *testing.T) {
-	var src = `package test
-	import "errors"
-	var err=errors.New("")
-	// S comment
-	type S int
-	// String comment1
-	// String comment2
-	func(s *S)String()string {return ""}
-	func F1(i int){a:=func(){}}
-	// F2 FuncLit!
-	var F2=func()int{
-		type G1 string
-		var v = struct{}{}
-		_=v
-		return 0
-	}
-	// H1 comment
-	var H1 = struct{}{}
-	// H2 comment
-	type H2 = struct{}
-	const (
-		S1 S = iota
-		S2
-	)
-`
-	prog, err := aster.LoadFile("../_out/func1.go", src)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	printProgram(prog)
-	pkg := prog.Package("test")
-	t.Logf("%#v", pkg.Info)
-	t.Log(pkg)
-	t.Log(pkg.Format())
-	pkg.Rewrite()
-}
 
 func printProgram(prog *aster.Program) {
 	// Created packages are the initial packages specified by a call
