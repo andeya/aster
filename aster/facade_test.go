@@ -7,8 +7,7 @@ import (
 	"github.com/henrylee2cn/aster/aster"
 )
 
-func TestInspect(t *testing.T) {
-	var src = `// Package test for aster
+var src = `// Package test for aster
 package test
 	import "errors"
 	var err=errors.New("")
@@ -34,10 +33,9 @@ package test
 		S2
 	)
 `
-	prog, err := aster.LoadFile("../_out/func1.go", src)
-	if err != nil {
-		t.Fatal(err)
-	}
+
+func TestInspect(t *testing.T) {
+	prog, _ := aster.LoadFile("../_out/inspect1.go", src)
 	prog.PrintResume()
 	pkg := prog.Package("test")
 	var log string
@@ -49,6 +47,21 @@ package test
 		return true
 	})
 	t.Log(log)
+}
+
+func TestComment(t *testing.T) {
+	prog, _ := aster.LoadFile("../_out/inspect1.go", src)
+	prog.Inspect(func(fa aster.Facade) bool {
+		succ := fa.CoverDoc("aster: " + fa.Doc())
+		if succ {
+			t.Logf("Add doc comment prefix success: %s", fa.Id())
+		} else {
+			t.Logf("Add doc comment prefix fail: %s", fa.Id())
+		}
+		return true
+	})
+	codes, _ := prog.Format()
+	t.Log(codes["../_out/inspect1.go"])
 }
 
 // func TestAlias(t *testing.T) {
