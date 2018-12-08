@@ -64,10 +64,18 @@ type Facade interface {
 	// Underlying returns the underlying type of a type.
 	Underlying() types.Type
 
+	// IsAlias reports whether obj is an alias name for a type.
+	IsAlias() bool
+
+	// NumMethods returns the number of explicit methods whose receiver is named type t.
+	NumMethods() int
+
+	// Method returns the i'th method of named type t for 0 <= i < t.NumMethods().
+	Method(i int) Facade
+
 	// ----------------------------- TypKind = Signature (function) -----------------------------
 
 	// IsMethod returns whether it is a method.
-	// NOTE: Panic, if TypKind != Signature
 	IsMethod() bool
 
 	// Params returns the parameters of signature s, or nil.
@@ -122,6 +130,15 @@ var _ Facade = (*facade)(nil)
 func (p *PackageInfo) getFacade(ident *ast.Ident) (facade *facade, idx int) {
 	for idx, facade = range p.facades {
 		if facade.ident == ident {
+			return
+		}
+	}
+	return nil, -1
+}
+
+func (p *PackageInfo) getFacadeByObj(obj types.Object) (facade *facade, idx int) {
+	for idx, facade = range p.facades {
+		if facade.obj == obj {
 			return
 		}
 	}
@@ -216,4 +233,39 @@ func (fa *facade) String() string { return fa.pkg.Preview(fa.ident) }
 // Underlying returns the underlying type of a type.
 func (fa *facade) Underlying() types.Type {
 	return fa.typ().Underlying()
+}
+
+// IsAlias reports whether obj is an alias name for a type.
+func (fa *facade) IsAlias() bool {
+	t, ok := fa.getNamed()
+	if !ok {
+		return false
+	}
+	return t.Obj().IsAlias()
+}
+
+func (fa *facade) getNamed() (*types.Named, bool) {
+	if fa.typKind() != named {
+		return nil, false
+	}
+	return fa.obj.Type().(*types.Named), true
+}
+
+// NumMethods returns the number of explicit methods whose receiver is named type t.
+func (fa *facade) NumMethods() int {
+	t, ok := fa.getNamed()
+	if !ok {
+		return 0
+	}
+	return t.NumMethods()
+}
+
+// Method returns the i'th method of named type t for 0 <= i < t.NumMethods().
+func (fa *facade) Method(i int) Facade {
+	t, ok := fa.getNamed()
+	if !ok {
+		return nil
+	}
+	r, _ := fa.pkg.getFacadeByObj(t.Method(i))
+	return r
 }

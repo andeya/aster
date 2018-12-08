@@ -24,8 +24,10 @@ func (fa *facade) signature() *types.Signature {
 }
 
 // IsMethod returns whether it is a method.
-// NOTE: Panic, if TypKind != Signature
 func (fa *facade) IsMethod() bool {
+	if fa.typKind() != Signature {
+		return false
+	}
 	return fa.signature().Recv() != nil
 }
 
