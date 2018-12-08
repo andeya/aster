@@ -50,14 +50,14 @@ func (p *PackageInfo) Inspect(fn func(*Facade) bool) {
 // Lookup lookups facades in the package.
 //
 // Match any name if name="";
-// Match any ObjKind if objKindSets=0 or objKindSets=AnyObjKind;
-// Match any TypKind if typKindSets=0 or typKindSets=AnyTypKind;
+// Match any ObjKind if objKindSet=0 or objKindSet=AnyObjKind;
+// Match any TypKind if typKindSet=0 or typKindSet=AnyTypKind;
 //
-func (p *PackageInfo) Lookup(objKindSets ObjKind, typKindSets TypKind, name string) (list []*Facade) {
+func (p *PackageInfo) Lookup(objKindSet ObjKind, typKindSet TypKind, name string) (list []*Facade) {
 	p.Inspect(func(fa *Facade) bool {
 		if (name == "" || fa.Name() == name) &&
-			(typKindSets == 0 || fa.TypKind().In(typKindSets)) &&
-			(objKindSets == 0 || fa.ObjKind().In(objKindSets)) {
+			(typKindSet == 0 || fa.TypKind().In(typKindSet)) &&
+			(objKindSet == 0 || fa.ObjKind().In(objKindSet)) {
 			list = append(list, fa)
 		}
 		return true

@@ -62,14 +62,14 @@ const (
 	AnyTypKind = ^TypKind(0) // any type kind
 )
 
-// In judges whether k is fully contained in sets.
-func (k ObjKind) In(sets ObjKind) bool {
-	return k&sets == k
+// In judges whether k is fully contained in set.
+func (k ObjKind) In(set ObjKind) bool {
+	return k&set == k
 }
 
-// In judges whether k is fully contained in sets.
-func (k TypKind) In(sets TypKind) bool {
-	return k&sets == k
+// In judges whether k is fully contained in set.
+func (k TypKind) In(set TypKind) bool {
+	return k&set == k
 }
 
 // GetObjKind returns what the types.Object represents.
