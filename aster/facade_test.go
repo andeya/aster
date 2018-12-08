@@ -43,7 +43,7 @@ package test
 	printProgram(prog)
 	pkg := prog.Package("test")
 	var log string
-	pkg.Inspect(func(fa *aster.Facade) bool {
+	pkg.Inspect(func(fa aster.Facade) bool {
 		log += fmt.Sprintf(
 			"\nObjKind: %s\nTypKind: %s\nDoc: %sPreview:\n%s\nObj:\n%s\n",
 			fa.ObjKind(), fa.TypKind(), fa.Doc(), fa, fa.Object(),

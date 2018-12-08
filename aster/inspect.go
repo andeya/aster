@@ -39,7 +39,7 @@ L:
 }
 
 // Inspect traverses facades in the package.
-func (p *PackageInfo) Inspect(fn func(*Facade) bool) {
+func (p *PackageInfo) Inspect(fn func(Facade) bool) {
 	for _, fa := range p.facades {
 		if !fn(fa) {
 			return
@@ -53,8 +53,8 @@ func (p *PackageInfo) Inspect(fn func(*Facade) bool) {
 // Match any ObjKind if objKindSet=0 or objKindSet=AnyObjKind;
 // Match any TypKind if typKindSet=0 or typKindSet=AnyTypKind;
 //
-func (p *PackageInfo) Lookup(objKindSet ObjKind, typKindSet TypKind, name string) (list []*Facade) {
-	p.Inspect(func(fa *Facade) bool {
+func (p *PackageInfo) Lookup(objKindSet ObjKind, typKindSet TypKind, name string) (list []Facade) {
+	p.Inspect(func(fa Facade) bool {
 		if (name == "" || fa.Name() == name) &&
 			(typKindSet == 0 || fa.TypKind().In(typKindSet)) &&
 			(objKindSet == 0 || fa.ObjKind().In(objKindSet)) {
