@@ -34,14 +34,14 @@ L:
 				}
 			}
 		}
-		p.addAster(ident, obj)
+		p.addFacade(ident, obj)
 	}
 }
 
 // Inspect traverses asters in the package.
-func (p *PackageInfo) Inspect(fn func(*Aster) bool) {
-	for _, obj := range p.asters {
-		if !fn(obj) {
+func (p *PackageInfo) Inspect(fn func(*Facade) bool) {
+	for _, fa := range p.facades {
+		if !fn(fa) {
 			return
 		}
 	}

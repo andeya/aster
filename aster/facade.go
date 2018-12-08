@@ -20,28 +20,28 @@ import (
 	"strings"
 )
 
-// An Aster describes a named language entity such as a package,
+// An Facade describes a named language entity such as a package,
 // constant, type, variable, function (incl. methods), or label.
-// All objects implement the Aster interface.
+// Facade interface implement all the objects.
 //
-type Aster struct {
+type Facade struct {
 	obj   types.Object
 	pkg   *PackageInfo
 	ident *ast.Ident
 	doc   *ast.CommentGroup
 }
 
-func (p *PackageInfo) getAster(ident *ast.Ident) (aster *Aster, idx int) {
-	for idx, aster = range p.asters {
-		if aster.ident == ident {
+func (p *PackageInfo) getFacade(ident *ast.Ident) (facade *Facade, idx int) {
+	for idx, facade = range p.facades {
+		if facade.ident == ident {
 			return
 		}
 	}
 	return nil, -1
 }
 
-func (p *PackageInfo) addAster(ident *ast.Ident, obj types.Object) {
-	p.asters = append(p.asters, &Aster{
+func (p *PackageInfo) addFacade(ident *ast.Ident, obj types.Object) {
+	p.facades = append(p.facades, &Facade{
 		obj:   obj,
 		pkg:   p,
 		ident: ident,
@@ -49,92 +49,92 @@ func (p *PackageInfo) addAster(ident *ast.Ident, obj types.Object) {
 	})
 }
 
-func (p *PackageInfo) removeAster(ident *ast.Ident) {
-	_, idx := p.getAster(ident)
+func (p *PackageInfo) removeFacade(ident *ast.Ident) {
+	_, idx := p.getFacade(ident)
 	if idx != -1 {
-		p.asters = append(p.asters[:idx], p.asters[idx+1:]...)
+		p.facades = append(p.facades[:idx], p.facades[idx+1:]...)
 	}
 }
 
 // Ident returns the indent.
-func (a *Aster) Ident() *ast.Ident {
-	return a.ident
+func (fa *Facade) Ident() *ast.Ident {
+	return fa.ident
 }
 
 // Object returns the types.Object.
-func (a *Aster) Object() types.Object {
-	return a.obj
+func (fa *Facade) Object() types.Object {
+	return fa.obj
 }
 
-// ObjKind returns what the Aster represents.
-func (a *Aster) ObjKind() ObjKind {
-	return GetObjKind(a.obj)
+// ObjKind returns what the Facade represents.
+func (fa *Facade) ObjKind() ObjKind {
+	return GetObjKind(fa.obj)
 }
 
-// TypKind returns what the Aster type represents.
-func (a *Aster) TypKind() TypKind {
-	if a.ObjKind() == Bad {
+// TypKind returns what the Facade type represents.
+func (fa *Facade) TypKind() TypKind {
+	if fa.ObjKind() == Bad {
 		return Invalid
 	}
-	return GetTypKind(a.typ())
+	return GetTypKind(fa.typ())
 }
 
 // Name returns the type's name within its package for a defined type.
 // For other (non-defined) types it returns the empty string.
-func (a *Aster) Name() string {
-	return a.ident.Name
+func (fa *Facade) Name() string {
+	return fa.ident.Name
 }
 
 // Doc returns lead comment.
-func (a *Aster) Doc() string {
-	return a.doc.Text()
+func (fa *Facade) Doc() string {
+	return fa.doc.Text()
 }
 
 // CoverDoc covers lead comment if it exists.
-func (a *Aster) CoverDoc(text string) bool {
-	if a.doc == nil {
+func (fa *Facade) CoverDoc(text string) bool {
+	if fa.doc == nil {
 		return false
 	}
-	a.doc.List = a.doc.List[len(a.doc.List)-1:]
-	doc := a.doc.List[0]
+	fa.doc.List = fa.doc.List[len(fa.doc.List)-1:]
+	doc := fa.doc.List[0]
 	doc.Text = text
-	text = "// " + strings.Replace(a.doc.Text(), "\n", "\n// ", -1)
+	text = "// " + strings.Replace(fa.doc.Text(), "\n", "\n// ", -1)
 	doc.Text = text[:len(text)-3]
 	return true
 }
 
 // String previews the object formated code and comment.
-func (a *Aster) String() string {
-	return a.pkg.Preview(a.ident)
+func (fa *Facade) String() string {
+	return fa.pkg.Preview(fa.ident)
 }
 
 // ---------------------------------- ObjKind != Bad (package or _=v) ----------------------------------
 
-func (a *Aster) typ() types.Type {
-	return a.obj.Type()
+func (fa *Facade) typ() types.Type {
+	return fa.obj.Type()
 }
 
 // Underlying returns the underlying type of a type.
-func (a *Aster) Underlying() types.Type {
-	return a.typ().Underlying()
+func (fa *Facade) Underlying() types.Type {
+	return fa.typ().Underlying()
 }
 
 // ---------------------------------- TypKind = Signature (function) ----------------------------------
 
-func (a *Aster) signature() *types.Signature {
-	return a.typ().(*types.Signature)
+func (fa *Facade) signature() *types.Signature {
+	return fa.typ().(*types.Signature)
 }
 
 // IsMethod returns whether it is a method.
 // NOTE: Panic, if TypKind != Signature
-func (a *Aster) IsMethod() bool {
-	return a.signature().Recv() != nil
+func (fa *Facade) IsMethod() bool {
+	return fa.signature().Recv() != nil
 }
 
 // Params returns the parameters of signature s, or nil.
 // NOTE: Panic, if TypKind != Signature
-func (a *Aster) Params() *types.Tuple {
-	return a.signature().Params()
+func (fa *Facade) Params() *types.Tuple {
+	return fa.signature().Params()
 }
 
 // Recv returns the receiver of signature s (if a method), or nil if a
@@ -144,18 +144,18 @@ func (a *Aster) Params() *types.Tuple {
 // as a *Named or an *Interface. Due to embedding, an interface may
 // contain methods whose receiver type is a different interface.
 // NOTE: Panic, if TypKind != Signature
-func (a *Aster) Recv() *types.Var {
-	return a.signature().Recv()
+func (fa *Facade) Recv() *types.Var {
+	return fa.signature().Recv()
 }
 
 // Results returns the results of signature s, or nil.
 // NOTE: Panic, if TypKind != Signature
-func (a *Aster) Results() *types.Tuple {
-	return a.signature().Results()
+func (fa *Facade) Results() *types.Tuple {
+	return fa.signature().Results()
 }
 
 // Variadic reports whether the signature s is variadic.
 // NOTE: Panic, if TypKind != Signature
-func (a *Aster) Variadic() bool {
-	return a.signature().Variadic()
+func (fa *Facade) Variadic() bool {
+	return fa.signature().Variadic()
 }

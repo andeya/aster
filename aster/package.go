@@ -36,7 +36,7 @@ type PackageInfo struct {
 	Files                 []*ast.File // syntax trees for the package's files
 	Errors                []error     // non-nil if the package had errors
 	types.Info                        // type-checker deductions.
-	asters                []*Aster
+	facades               []*Facade
 }
 
 // A File node represents a Go source file.
