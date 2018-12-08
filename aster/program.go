@@ -301,16 +301,16 @@ func (prog *Program) Package(path string) *PackageInfo {
 	return nil
 }
 
-// PathEnclosingInterval returns the PackageInfo and ast.Node that
+// pathEnclosingInterval returns the PackageInfo and ast.Node that
 // contain source interval [start, end), and all the node's ancestors
 // up to the AST root.  It searches all ast.Files of all packages in prog.
 // exact is defined as for astutil.PathEnclosingInterval.
 //
 // The zero value is returned if not found.
 //
-func (prog *Program) PathEnclosingInterval(start, end token.Pos) (pkg *PackageInfo, path []ast.Node, exact bool) {
+func (prog *Program) pathEnclosingInterval(start, end token.Pos) (pkg *PackageInfo, path []ast.Node, exact bool) {
 	for _, pkg = range prog.allPackages {
-		path, exact = pkg.PathEnclosingInterval(start, end)
+		path, exact = pkg.pathEnclosingInterval(start, end)
 		if path != nil {
 			return
 		}

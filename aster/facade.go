@@ -150,7 +150,7 @@ func (p *PackageInfo) addFacade(ident *ast.Ident, obj types.Object) {
 		obj:   obj,
 		pkg:   p,
 		ident: ident,
-		doc:   p.DocComment(ident),
+		doc:   p.docComment(ident),
 	})
 }
 

@@ -62,14 +62,14 @@ func (p *PackageInfo) String() string {
 	return p.Pkg.Path()
 }
 
-// PathEnclosingInterval returns the PackageInfo and ast.Node that
+// pathEnclosingInterval returns the PackageInfo and ast.Node that
 // contain source interval [start, end), and all the node's ancestors
 // up to the AST root.  It searches all ast.files in the package.
 // exact is defined as for astutil.PathEnclosingInterval.
 //
 // The zero value is returned if not found.
 //
-func (p *PackageInfo) PathEnclosingInterval(start, end token.Pos) (path []ast.Node, exact bool) {
+func (p *PackageInfo) pathEnclosingInterval(start, end token.Pos) (path []ast.Node, exact bool) {
 	for _, f := range p.files {
 		if f.Pos() == token.NoPos {
 			// This can happen if the parser saw
@@ -87,9 +87,9 @@ func (p *PackageInfo) PathEnclosingInterval(start, end token.Pos) (path []ast.No
 	return nil, false
 }
 
-// DocComment returns the doc for an identifier.
-func (p *PackageInfo) DocComment(id *ast.Ident) *ast.CommentGroup {
-	nodes, _ := p.PathEnclosingInterval(id.Pos(), id.End())
+// docComment returns the doc for an identifier.
+func (p *PackageInfo) docComment(id *ast.Ident) *ast.CommentGroup {
+	nodes, _ := p.pathEnclosingInterval(id.Pos(), id.End())
 	for _, node := range nodes {
 		switch decl := node.(type) {
 		case *ast.FuncDecl:
@@ -118,7 +118,7 @@ func (p *PackageInfo) DocComment(id *ast.Ident) *ast.CommentGroup {
 
 // Preview previews the formated code and comment.
 func (p *PackageInfo) Preview(ident *ast.Ident) string {
-	nodes, _ := p.PathEnclosingInterval(ident.Pos(), ident.End())
+	nodes, _ := p.pathEnclosingInterval(ident.Pos(), ident.End())
 	for _, node := range nodes {
 		switch decl := node.(type) {
 		case *ast.FuncDecl, *ast.GenDecl, *ast.AssignStmt:

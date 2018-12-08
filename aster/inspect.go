@@ -30,7 +30,7 @@ L:
 			if GetTypKind(obj.Type()) == Struct {
 				break
 			}
-			nodes, _ := p.PathEnclosingInterval(ident.Pos(), ident.End())
+			nodes, _ := p.pathEnclosingInterval(ident.Pos(), ident.End())
 			for _, n := range nodes {
 				if _, ok := n.(*ast.Field); ok {
 					continue L
