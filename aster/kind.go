@@ -14,33 +14,35 @@
 
 package aster
 
-import "go/types"
+import (
+	"go/types"
+)
 
 //go:generate Stringer -type ObjKind,TypKind -output kind_string.go
 
 // ObjKind describes what an object statement represents.
 // Extension based on ast.ObjKind: Buil and Nil
-type ObjKind int
+type ObjKind uint32
 
 // The list of possible object statement kinds.
 const (
-	Bad ObjKind = iota // for error handling
-	Pkg                // package
-	Con                // constant
-	Typ                // type
-	Var                // variable
-	Fun                // function or method
-	Lbl                // label
-	Bui                // builtin
-	Nil                // nil
+	Bad ObjKind = 1 << iota // for error handling
+	Pkg                     // package
+	Con                     // constant
+	Typ                     // type
+	Var                     // variable
+	Fun                     // function or method
+	Lbl                     // label
+	Bui                     // builtin
+	Nil                     // nil
 )
 
 // TypKind describes what an object type represents.
-type TypKind int
+type TypKind uint32
 
 // The list of possible object type kinds.
 const (
-	Invalid TypKind = iota // type is invalid
+	Invalid TypKind = 1 << iota // type is invalid
 	Basic
 	Array
 	Slice
@@ -53,6 +55,22 @@ const (
 	Chan
 	Named
 )
+
+// any kinds
+const (
+	AnyObjKind = ^ObjKind(0) // any object kind
+	AnyTypKind = ^TypKind(0) // any type kind
+)
+
+// In judges whether k is fully contained in sets.
+func (k ObjKind) In(sets ObjKind) bool {
+	return k&sets == k
+}
+
+// In judges whether k is fully contained in sets.
+func (k TypKind) In(sets TypKind) bool {
+	return k&sets == k
+}
 
 // GetObjKind returns what the types.Object represents.
 func GetObjKind(obj types.Object) ObjKind {

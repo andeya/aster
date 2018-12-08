@@ -51,7 +51,7 @@ func (p *PackageInfo) addFacade(ident *ast.Ident, obj types.Object) {
 
 func (p *PackageInfo) removeFacade(ident *ast.Ident) {
 	_, idx := p.getFacade(ident)
-	if idx != -1 {
+	if idx >= 0 {
 		p.facades = append(p.facades[:idx], p.facades[idx+1:]...)
 	}
 }

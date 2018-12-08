@@ -38,11 +38,29 @@ L:
 	}
 }
 
-// Inspect traverses asters in the package.
+// Inspect traverses facades in the package.
 func (p *PackageInfo) Inspect(fn func(*Facade) bool) {
 	for _, fa := range p.facades {
 		if !fn(fa) {
 			return
 		}
 	}
+}
+
+// Lookup lookups facades in the package.
+//
+// Match any name if name="";
+// Match any ObjKind if objKindSets=0 or objKindSets=AnyObjKind;
+// Match any TypKind if typKindSets=0 or typKindSets=AnyTypKind;
+//
+func (p *PackageInfo) Lookup(objKindSets ObjKind, typKindSets TypKind, name string) (list []*Facade) {
+	p.Inspect(func(fa *Facade) bool {
+		if (name == "" || fa.Name() == name) &&
+			(typKindSets == 0 || fa.TypKind().In(typKindSets)) &&
+			(objKindSets == 0 || fa.ObjKind().In(objKindSets)) {
+			list = append(list, fa)
+		}
+		return true
+	})
+	return
 }

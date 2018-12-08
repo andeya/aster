@@ -4,24 +4,65 @@ package aster
 
 import "strconv"
 
-const _ObjKind_name = "BadPkgConTypVarFunLblBuiNil"
+const (
+	_ObjKind_name_0 = "BadPkg"
+	_ObjKind_name_1 = "Con"
+	_ObjKind_name_2 = "Typ"
+	_ObjKind_name_3 = "Var"
+	_ObjKind_name_4 = "Fun"
+	_ObjKind_name_5 = "Lbl"
+	_ObjKind_name_6 = "Bui"
+	_ObjKind_name_7 = "Nil"
+)
 
-var _ObjKind_index = [...]uint8{0, 3, 6, 9, 12, 15, 18, 21, 24, 27}
+var (
+	_ObjKind_index_0 = [...]uint8{0, 3, 6}
+)
 
 func (i ObjKind) String() string {
-	if i < 0 || i >= ObjKind(len(_ObjKind_index)-1) {
+	switch {
+	case 1 <= i && i <= 2:
+		i -= 1
+		return _ObjKind_name_0[_ObjKind_index_0[i]:_ObjKind_index_0[i+1]]
+	case i == 4:
+		return _ObjKind_name_1
+	case i == 8:
+		return _ObjKind_name_2
+	case i == 16:
+		return _ObjKind_name_3
+	case i == 32:
+		return _ObjKind_name_4
+	case i == 64:
+		return _ObjKind_name_5
+	case i == 128:
+		return _ObjKind_name_6
+	case i == 256:
+		return _ObjKind_name_7
+	default:
 		return "ObjKind(" + strconv.FormatInt(int64(i), 10) + ")"
 	}
-	return _ObjKind_name[_ObjKind_index[i]:_ObjKind_index[i+1]]
 }
 
 const _TypKind_name = "InvalidBasicArraySliceStructPointerTupleSignatureInterfaceMapChanNamed"
 
-var _TypKind_index = [...]uint8{0, 7, 12, 17, 22, 28, 35, 40, 49, 58, 61, 65, 70}
+var _TypKind_map = map[TypKind]string{
+	1:    _TypKind_name[0:7],
+	2:    _TypKind_name[7:12],
+	4:    _TypKind_name[12:17],
+	8:    _TypKind_name[17:22],
+	16:   _TypKind_name[22:28],
+	32:   _TypKind_name[28:35],
+	64:   _TypKind_name[35:40],
+	128:  _TypKind_name[40:49],
+	256:  _TypKind_name[49:58],
+	512:  _TypKind_name[58:61],
+	1024: _TypKind_name[61:65],
+	2048: _TypKind_name[65:70],
+}
 
 func (i TypKind) String() string {
-	if i < 0 || i >= TypKind(len(_TypKind_index)-1) {
-		return "TypKind(" + strconv.FormatInt(int64(i), 10) + ")"
+	if str, ok := _TypKind_map[i]; ok {
+		return str
 	}
-	return _TypKind_name[_TypKind_index[i]:_TypKind_index[i+1]]
+	return "TypKind(" + strconv.FormatInt(int64(i), 10) + ")"
 }
