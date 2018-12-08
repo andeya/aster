@@ -52,15 +52,15 @@ var (
 )
 
 func setStructTag(obj aster.Object) bool {
-	if obj.Kind() != aster.Struct {
+	if fa.TypKind() != aster.Struct {
 		return true
 	}
-	for i := obj.NumField() - 1; i >= 0; i-- {
-		field := obj.Field(i)
-		if !aster.IsExported(field.Name()) {
+	for i := fa.NumFields() - 1; i >= 0; i-- {
+		field := fa.Field(i)
+		if !field.Exported() {
 			continue
 		}
-		field.Tags.Set(&aster.Tag{
+		field.Tags().Set(&aster.Tag{
 			Key:     "json",
 			Name:    goutil.SnakeString(field.Name()),
 			Options: []string{"omitempty"},
@@ -71,11 +71,9 @@ func setStructTag(obj aster.Object) bool {
 
 func main() {
 	flag.Parse()
-	f, _ := aster.ParseFile(*filename, *src)
-	f.Inspect(setStructTag)
-	retCode, _ := f.Format()
-	fmt.Println(retCode)
-	_ = f.Store()
+	prog, _ := aster.LoadFile(*filename, *src)
+	prog.Inspect(setStructTag)
+	_ = prog.Rewrite()
 }
 ```
 
@@ -99,3 +97,16 @@ func F() {
 	}
 }
 ```
+
+## Task List
+
+- [ ] Basic
+- [ ] Array
+- [ ] Slice
+- [x] Struct
+- [ ] Pointer
+- [ ] Tuple
+- [x] Signature // non-builtin function or method
+- [ ] Interface
+- [ ] Map
+- [ ] Chan

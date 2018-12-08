@@ -18,6 +18,7 @@ import "go/types"
 
 // ---------------------------------- TypKind = Signature (function) ----------------------------------
 
+// NOTE: Panic, if TypKind != Signature
 func (fa *facade) signature() *types.Signature {
 	return fa.typ().(*types.Signature)
 }

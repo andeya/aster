@@ -22,11 +22,14 @@ import (
 func (p *PackageInfo) check() {
 	log.Printf("Checking package %s...", p.String())
 L:
-	for ident, obj := range p.Defs {
+	for ident, obj := range p.info.Defs {
 		switch GetObjKind(obj) {
 		case Bad, Lbl, Bui, Nil:
-			continue
+			continue L
 		case Var:
+			if GetTypKind(obj.Type()) == Struct {
+				break
+			}
 			nodes, _ := p.PathEnclosingInterval(ident.Pos(), ident.End())
 			for _, n := range nodes {
 				if _, ok := n.(*ast.Field); ok {
@@ -36,6 +39,35 @@ L:
 		}
 		p.addFacade(ident, obj)
 	}
+}
+
+// Inspect traverses created and imported packages in the program.
+func (prog *Program) Inspect(fn func(Facade) bool) {
+	for _, pkg := range prog.InitialPackages() {
+		for _, fa := range pkg.facades {
+			if !fn(fa) {
+				return
+			}
+		}
+	}
+}
+
+// Lookup lookups facades in the program.
+//
+// Match any name if name="";
+// Match any ObjKind if objKindSet=0 or objKindSet=AnyObjKind;
+// Match any TypKind if typKindSet=0 or typKindSet=AnyTypKind;
+//
+func (prog *Program) Lookup(objKindSet ObjKind, typKindSet TypKind, name string) (list []Facade) {
+	prog.Inspect(func(fa Facade) bool {
+		if (name == "" || fa.Name() == name) &&
+			(typKindSet == 0 || fa.TypKind().In(typKindSet)) &&
+			(objKindSet == 0 || fa.ObjKind().In(objKindSet)) {
+			list = append(list, fa)
+		}
+		return true
+	})
+	return
 }
 
 // Inspect traverses facades in the package.

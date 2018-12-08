@@ -43,7 +43,7 @@ func (i ObjKind) String() string {
 	}
 }
 
-const _TypKind_name = "InvalidBasicArraySliceStructPointerTupleSignatureInterfaceMapChanNamed"
+const _TypKind_name = "InvalidBasicArraySliceStructPointerTupleSignatureInterfaceMapChannamed"
 
 var _TypKind_map = map[TypKind]string{
 	1:    _TypKind_name[0:7],

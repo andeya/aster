@@ -16,20 +16,40 @@ package aster
 
 import (
 	"bytes"
+	"fmt"
 	"go/ast"
 	"go/format"
 	"os"
 	"path/filepath"
+	"sort"
+	"strings"
 
 	"github.com/henrylee2cn/goutil"
 )
 
-// Format format the package and returns the string.
+// Format formats the created and imported packages, and returns the string.
+// @codes <fileName,code>
+func (prog *Program) Format() (codes map[string]string, first error) {
+	codes = make(map[string]string, 128)
+	var c map[string]string
+	for _, pkg := range prog.InitialPackages() {
+		c, first = pkg.Format()
+		if first != nil {
+			return
+		}
+		for k, v := range c {
+			codes[k] = v
+		}
+	}
+	return
+}
+
+// Format formats the package and returns the string.
 // @codes <fileName,code>
 func (p *PackageInfo) Format() (codes map[string]string, first error) {
-	codes = make(map[string]string, len(p.Files))
+	codes = make(map[string]string, len(p.files))
 	var code string
-	for _, f := range p.Files {
+	for _, f := range p.files {
 		code, first = p.FormatNode(f)
 		if first != nil {
 			return
@@ -40,16 +60,32 @@ func (p *PackageInfo) Format() (codes map[string]string, first error) {
 }
 
 // FormatNode formats the node and returns the string.
-func (p *PackageInfo) FormatNode(node ast.Node) (string, error) {
+func (prog *Program) FormatNode(node ast.Node) (string, error) {
 	var dst bytes.Buffer
-	err := format.Node(&dst, p.prog.Fset, node)
+	err := format.Node(&dst, prog.fset, node)
 	if err != nil {
 		return "", err
 	}
 	return goutil.BytesToString(dst.Bytes()), nil
 }
 
-// Rewrite formats the package codes and writes to the local files.
+// FormatNode formats the node and returns the string.
+func (p *PackageInfo) FormatNode(node ast.Node) (string, error) {
+	return p.prog.FormatNode(node)
+}
+
+// Rewrite formats the created and imported packages codes and writes to local files.
+func (prog *Program) Rewrite() (first error) {
+	for _, pkg := range prog.InitialPackages() {
+		first = pkg.Rewrite()
+		if first != nil {
+			return
+		}
+	}
+	return
+}
+
+// Rewrite formats the package codes and writes to local files.
 func (p *PackageInfo) Rewrite() (first error) {
 	codes, first := p.Format()
 	if first != nil {
@@ -62,6 +98,45 @@ func (p *PackageInfo) Rewrite() (first error) {
 		}
 	}
 	return
+}
+
+// PrintResume prints the program resume.
+func (prog *Program) PrintResume() {
+	// Created packages are the initial packages specified by a call
+	// to CreateFromFilenames or CreateFromFiles.
+	var names []string
+	for _, info := range prog.created {
+		names = append(names, info.Pkg.Path())
+	}
+	fmt.Printf("created: %s\n", names)
+
+	// Imported packages are the initial packages specified by a
+	// call to Import or ImportWithTests.
+	names = nil
+	for _, info := range prog.imported {
+		if strings.Contains(info.Pkg.Path(), "internal") {
+			continue // skip, to reduce fragility
+		}
+		names = append(names, info.Pkg.Path())
+	}
+	sort.Strings(names)
+	fmt.Printf("imported: %s\n", names)
+
+	// InitialPackages contains the union of created and imported.
+	names = nil
+	for _, info := range prog.InitialPackages() {
+		names = append(names, info.Pkg.Path())
+	}
+	sort.Strings(names)
+	fmt.Printf("initial: %s\n", names)
+
+	// AllPackages contains all initial packages and their dependencies.
+	names = nil
+	for pkg := range prog.allPackages {
+		names = append(names, pkg.Path())
+	}
+	sort.Strings(names)
+	fmt.Printf("all: %s\n", names)
 }
 
 func writeFile(filename, text string) error {

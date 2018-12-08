@@ -34,10 +34,10 @@ type Program struct {
 	initialError error // first error for initial
 	initiated    bool
 
-	// Fset the file set for this program
-	Fset *token.FileSet
+	// fset the file set for this program
+	fset *token.FileSet
 
-	// Created[i] contains the initial package whose ASTs or
+	// created[i] contains the initial package whose ASTs or
 	// filenames were supplied by AddFiles(), MustAddFiles()
 	// and LoadFile() followed by the external test package,
 	// if any, of each package in Import(), ImportWithTests(),
@@ -46,16 +46,16 @@ type Program struct {
 	// NOTE: these files must not import "C".  Cgo preprocessing is
 	// only performed on imported packages, not ad hoc packages.
 	//
-	Created []*PackageInfo
+	created []*PackageInfo
 
-	// Imported contains the initially imported packages,
+	// imported contains the initially imported packages,
 	// as specified by Import(), ImportWithTests(), LoadPkgs and LoadPkgsWithTests().
-	Imported map[string]*PackageInfo
+	imported map[string]*PackageInfo
 
-	// AllPackages contains the PackageInfo of every package
+	// allPackages contains the PackageInfo of every package
 	// encountered by Load: all initial packages and all
 	// dependencies, including incomplete ones.
-	AllPackages map[*types.Package]*PackageInfo
+	allPackages map[*types.Package]*PackageInfo
 
 	filenames map[*ast.File]string
 
@@ -239,28 +239,28 @@ func (prog *Program) MustLoad() (itself *Program) {
 }
 
 func (prog *Program) convert(p *loader.Program) (itself *Program) {
-	prog.Fset = p.Fset
-	prog.Imported = make(map[string]*PackageInfo, len(prog.Imported))
-	prog.AllPackages = make(map[*types.Package]*PackageInfo, len(prog.AllPackages))
+	prog.fset = p.Fset
+	prog.imported = make(map[string]*PackageInfo, len(prog.imported))
+	prog.allPackages = make(map[*types.Package]*PackageInfo, len(prog.allPackages))
 
 	var solved = make(map[*loader.PackageInfo]*PackageInfo, len(p.AllPackages))
 	for _, info := range p.Created {
 		newInfo := newPackageInfo(prog, info)
 		solved[info] = newInfo
-		prog.Created = append(prog.Created, newInfo)
+		prog.created = append(prog.created, newInfo)
 	}
 	for k, info := range p.Imported {
 		newInfo := newPackageInfo(prog, info)
 		solved[info] = newInfo
-		prog.Imported[k] = newInfo
+		prog.imported[k] = newInfo
 	}
 	for k, info := range p.AllPackages {
 		if newInfo, ok := solved[info]; ok {
-			prog.AllPackages[k] = newInfo
+			prog.allPackages[k] = newInfo
 		} else {
 			newInfo := newPackageInfo(prog, info)
 			solved[info] = newInfo
-			prog.AllPackages[k] = newInfo
+			prog.allPackages[k] = newInfo
 		}
 	}
 	prog.check()
@@ -274,11 +274,11 @@ func (prog *Program) check() {
 }
 
 // InitialPackages returns a new slice containing the set of initial
-// packages (Created + Imported) in unspecified order.
+// packages (created + imported) in unspecified order.
 func (prog *Program) InitialPackages() []*PackageInfo {
-	pkgs := make([]*PackageInfo, 0, len(prog.Created)+len(prog.Imported))
-	pkgs = append(pkgs, prog.Created...)
-	for _, pkg := range prog.Imported {
+	pkgs := make([]*PackageInfo, 0, len(prog.created)+len(prog.imported))
+	pkgs = append(pkgs, prog.created...)
+	for _, pkg := range prog.imported {
 		pkgs = append(pkgs, pkg)
 	}
 	return pkgs
@@ -288,12 +288,12 @@ func (prog *Program) InitialPackages() []*PackageInfo {
 // specified package.
 // NOTE: return nil, if the package does not exist.
 func (prog *Program) Package(path string) *PackageInfo {
-	for k, v := range prog.AllPackages {
+	for k, v := range prog.allPackages {
 		if k.Path() == path {
 			return v
 		}
 	}
-	for _, info := range prog.Created {
+	for _, info := range prog.created {
 		if path == info.Pkg.Path() {
 			return info
 		}
@@ -309,7 +309,7 @@ func (prog *Program) Package(path string) *PackageInfo {
 // The zero value is returned if not found.
 //
 func (prog *Program) PathEnclosingInterval(start, end token.Pos) (pkg *PackageInfo, path []ast.Node, exact bool) {
-	for _, pkg = range prog.AllPackages {
+	for _, pkg = range prog.allPackages {
 		path, exact = pkg.PathEnclosingInterval(start, end)
 		if path != nil {
 			return

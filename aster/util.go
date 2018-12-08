@@ -20,6 +20,23 @@ import (
 	"golang.org/x/tools/go/ast/astutil"
 )
 
+func cloneIdent(i *ast.Ident) *ast.Ident {
+	return &ast.Ident{
+		Name: i.Name,
+		Obj:  i.Obj,
+	}
+}
+
+func cloneBasicLit(b *ast.BasicLit) *ast.BasicLit {
+	if b == nil {
+		return nil
+	}
+	return &ast.BasicLit{
+		Kind:  b.Kind,
+		Value: b.Value,
+	}
+}
+
 func textOrError(text string, err error) string {
 	if err == nil {
 		return text

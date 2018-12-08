@@ -31,11 +31,11 @@ import (
 type PackageInfo struct {
 	prog                  *Program
 	Pkg                   *types.Package
-	Importable            bool        // true if 'import "Pkg.Path()"' would resolve to this
-	TransitivelyErrorFree bool        // true if Pkg and all its dependencies are free of errors
-	Files                 []*ast.File // syntax trees for the package's files
+	importable            bool        // true if 'import "Pkg.Path()"' would resolve to this
+	transitivelyErrorFree bool        // true if Pkg and all its dependencies are free of errors
+	files                 []*ast.File // syntax trees for the package's files
 	Errors                []error     // non-nil if the package had errors
-	types.Info                        // type-checker deductions.
+	info                  types.Info  // type-checker deductions.
 	facades               []*facade
 }
 
@@ -49,11 +49,11 @@ type File struct {
 func newPackageInfo(prog *Program, pkg *loader.PackageInfo) *PackageInfo {
 	return &PackageInfo{
 		Pkg:                   pkg.Pkg,
-		Importable:            pkg.Importable,
-		TransitivelyErrorFree: pkg.TransitivelyErrorFree,
-		Files:                 pkg.Files,
+		importable:            pkg.Importable,
+		transitivelyErrorFree: pkg.TransitivelyErrorFree,
+		files:                 pkg.Files,
 		Errors:                pkg.Errors,
-		Info:                  pkg.Info,
+		info:                  pkg.Info,
 		prog:                  prog,
 	}
 }
@@ -64,20 +64,20 @@ func (p *PackageInfo) String() string {
 
 // PathEnclosingInterval returns the PackageInfo and ast.Node that
 // contain source interval [start, end), and all the node's ancestors
-// up to the AST root.  It searches all ast.Files in the package.
+// up to the AST root.  It searches all ast.files in the package.
 // exact is defined as for astutil.PathEnclosingInterval.
 //
 // The zero value is returned if not found.
 //
 func (p *PackageInfo) PathEnclosingInterval(start, end token.Pos) (path []ast.Node, exact bool) {
-	for _, f := range p.Files {
+	for _, f := range p.files {
 		if f.Pos() == token.NoPos {
 			// This can happen if the parser saw
 			// too many errors and bailed out.
 			// (Use parser.AllErrors to prevent that.)
 			continue
 		}
-		if !tokenFileContainsPos(p.prog.Fset.File(f.Pos()), start) {
+		if !tokenFileContainsPos(p.prog.fset.File(f.Pos()), start) {
 			continue
 		}
 		if path, exact := astutil.PathEnclosingInterval(f, start, end); path != nil {
@@ -123,6 +123,17 @@ func (p *PackageInfo) Preview(ident *ast.Ident) string {
 		switch decl := node.(type) {
 		case *ast.FuncDecl, *ast.GenDecl, *ast.AssignStmt:
 			return textOrError(p.FormatNode(decl))
+		case *ast.Field:
+			s, err := p.FormatNode(decl.Type)
+			if s != textOrError(s, err) {
+				return s
+			}
+			var doc = decl.Doc.Text()
+			if doc != "" {
+				doc = "// " + doc
+			}
+			var name = decl.Names[0].Name
+			return "//aster:field\n" + doc + "var " + name + " " + s
 		case *ast.File:
 			return "package " + ident.String()
 		}

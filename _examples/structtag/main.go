@@ -13,16 +13,16 @@ var (
 	src      = flag.String("src", "package test", "code text")
 )
 
-func setStructTag(obj aster.Object) bool {
-	if obj.Kind() != aster.Struct {
+func setStructTag(fa aster.Facade) bool {
+	if fa.TypKind() != aster.Struct {
 		return true
 	}
-	for i := obj.NumField() - 1; i >= 0; i-- {
-		field := obj.Field(i)
-		if !aster.IsExported(field.Name()) {
+	for i := fa.NumFields() - 1; i >= 0; i-- {
+		field := fa.Field(i)
+		if !field.Exported() {
 			continue
 		}
-		field.Tags.Set(&aster.Tag{
+		field.Tags().Set(&aster.Tag{
 			Key:     "json",
 			Name:    goutil.SnakeString(field.Name()),
 			Options: []string{"omitempty"},
@@ -34,21 +34,21 @@ func setStructTag(obj aster.Object) bool {
 func main() {
 	flag.Parse()
 
-	f, err := aster.ParseFile(*filename, *src)
+	prog, err := aster.LoadFile(*filename, *src)
 	if err != nil {
 		panic(err)
 	}
 
-	f.Inspect(setStructTag)
+	prog.Inspect(setStructTag)
 
-	ret, err := f.Format()
+	ret, err := prog.Format()
 	if err != nil {
 		panic(err)
 	}
 	fmt.Println(ret)
 
-	err = f.Store()
-	if err != nil {
-		panic(err)
-	}
+	// err = prog.Rewrite()
+	// if err != nil {
+	// 	panic(err)
+	// }
 }

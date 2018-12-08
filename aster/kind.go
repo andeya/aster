@@ -53,7 +53,7 @@ const (
 	Interface
 	Map
 	Chan
-	Named
+	named
 )
 
 // any kinds
@@ -119,7 +119,7 @@ func GetTypKind(typ types.Type) TypKind {
 	case *types.Chan:
 		return Chan
 	case *types.Named:
-		return Named
+		return named
 	}
 	return Invalid
 }

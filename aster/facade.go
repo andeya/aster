@@ -30,25 +30,41 @@ import (
 type Facade interface {
 	// Ident returns the indent.
 	Ident() *ast.Ident
+
 	// Object returns the types.Object.
 	Object() types.Object
+
 	// ObjKind returns what the facade represents.
 	ObjKind() ObjKind
+
 	// TypKind returns what the facade type represents.
 	TypKind() TypKind
+
+	// Id is a wrapper for Id(obj.Pkg(), obj.Name()).
+	Id() string
+
 	// Name returns the type's name within its package for a defined type.
 	// For other (non-defined) types it returns the empty string.
 	Name() string
+
 	// Doc returns lead comment.
 	Doc() string
+
 	// CoverDoc covers lead comment if it exists.
 	CoverDoc(text string) bool
+
+	// Exported reports whether the object is exported (starts with a capital letter).
+	// It doesn't take into account whether the object is in a local (function) scope
+	// or not.
+	Exported() bool
+
 	// String previews the object formated code and comment.
 	String() string
+
 	// Underlying returns the underlying type of a type.
 	Underlying() types.Type
 
-	// ----------------- TypKind = Signature (function) -----------------
+	// ----------------------------- TypKind = Signature (function) -----------------------------
 
 	// IsMethod returns whether it is a method.
 	// NOTE: Panic, if TypKind != Signature
@@ -74,13 +90,31 @@ type Facade interface {
 	// Variadic reports whether the signature s is variadic.
 	// NOTE: Panic, if TypKind != Signature
 	Variadic() bool
+
+	// ---------------------------------- TypKind = Struct ----------------------------------
+
+	// NumFields returns the number of fields in the struct (including blank and embedded fields).
+	// NOTE: Panic, if TypKind != Struct
+	NumFields() int
+
+	// Field returns the i'th field for 0 <= i < NumFields().
+	// NOTE:
+	// Panic, if TypKind != Struct;
+	// Panic, if i is not in the range [0, NumFields()).
+	Field(i int) *StructField
+
+	// FieldByName returns the struct field with the given name
+	// and a boolean indicating if the field was found.
+	// NOTE: Panic, if TypKind != Struct
+	FieldByName(name string) (field *StructField, found bool)
 }
 
 type facade struct {
-	obj   types.Object
-	pkg   *PackageInfo
-	ident *ast.Ident
-	doc   *ast.CommentGroup
+	obj          types.Object
+	pkg          *PackageInfo
+	ident        *ast.Ident
+	doc          *ast.CommentGroup
+	structFields []*StructField // effective only for structure
 }
 
 var _ Facade = (*facade)(nil)
@@ -127,11 +161,25 @@ func (fa *facade) ObjKind() ObjKind {
 
 // TypKind returns what the facade type represents.
 func (fa *facade) TypKind() TypKind {
+	return GetTypKind(fa.typ())
+}
+
+func (fa *facade) typKind() TypKind {
 	if fa.ObjKind() == Bad {
 		return Invalid
 	}
-	return GetTypKind(fa.typ())
+	return GetTypKind(fa.obj.Type())
 }
+
+func (fa *facade) typ() types.Type {
+	if fa.typKind() == named {
+		return fa.obj.Type().Underlying()
+	}
+	return fa.obj.Type()
+}
+
+// Id is a wrapper for Id(obj.Pkg(), obj.Name()).
+func (fa *facade) Id() string { return fa.obj.Id() }
 
 // Name returns the type's name within its package for a defined type.
 // For other (non-defined) types it returns the empty string.
@@ -157,16 +205,13 @@ func (fa *facade) CoverDoc(text string) bool {
 	return true
 }
 
+// Exported reports whether the object is exported (starts with a capital letter).
+// It doesn't take into account whether the object is in a local (function) scope
+// or not.
+func (fa *facade) Exported() bool { return fa.obj.Exported() }
+
 // String previews the object formated code and comment.
-func (fa *facade) String() string {
-	return fa.pkg.Preview(fa.ident)
-}
-
-// ---------------------------------- ObjKind != Bad (package or _=v) ----------------------------------
-
-func (fa *facade) typ() types.Type {
-	return fa.obj.Type()
-}
+func (fa *facade) String() string { return fa.pkg.Preview(fa.ident) }
 
 // Underlying returns the underlying type of a type.
 func (fa *facade) Underlying() types.Type {
