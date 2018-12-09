@@ -14,13 +14,21 @@
 
 package aster
 
-import "go/types"
+import (
+	"fmt"
+	"go/types"
+)
 
 // ---------------------------------- TypKind = Signature (function) ----------------------------------
 
 // NOTE: Panic, if TypKind != Signature
 func (fa *facade) signature() *types.Signature {
-	return fa.typ().(*types.Signature)
+	typ := fa.typ()
+	t, ok := typ.(*types.Signature)
+	if !ok {
+		panic(fmt.Sprintf("aster: signature of non-Signature TypKind: %T", typ))
+	}
+	return t
 }
 
 // IsMethod returns whether it is a method.
@@ -41,7 +49,7 @@ func (fa *facade) Params() *types.Tuple {
 // function. It is ignored when comparing signatures for identity.
 //
 // For an abstract method, Recv returns the enclosing interface either
-// as a *Named or an *Interface. Due to embedding, an interface may
+// as a *Named or an *Signature. Due to embedding, an interface may
 // contain methods whose receiver type is a different interface.
 // NOTE: Panic, if TypKind != Signature
 func (fa *facade) Recv() *types.Var {

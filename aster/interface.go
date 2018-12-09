@@ -14,21 +14,28 @@
 
 package aster
 
-import "go/types"
+import (
+	"fmt"
+	"go/types"
+)
 
 // ---------------------------------- TypKind = Interface ----------------------------------
 
 // NOTE: Panic, if TypKind != Interface
 func (fa *facade) iface() *types.Interface {
-	return fa.typ().(*types.Interface)
+	typ := fa.typ()
+	t, ok := typ.(*types.Interface)
+	if !ok {
+		panic(fmt.Sprintf("aster: iface of non-Interface TypKind: %T", typ))
+	}
+	return t
 }
 
 // EmbeddedType returns the i'th embedded type of interface fa for 0 <= i < fa.NumEmbeddeds().
 // NOTE: Panic, if TypKind != Interface
 func (fa *facade) IfaceEmbeddedType(i int) Facade {
 	t := fa.iface().EmbeddedType(i)
-	r, _ := fa.pkg.getFacadeByType(t)
-	return r
+	return fa.mustGetFacadeByTyp(t)
 }
 
 // IfaceEmpty returns true if fa is the empty interface.
@@ -46,8 +53,7 @@ func (fa *facade) IfaceEmpty() bool {
 //  The result's TypKind is Signature.
 func (fa *facade) IfaceExplicitMethod(i int) Facade {
 	fn := fa.iface().ExplicitMethod(i)
-	r, _ := fa.pkg.getFacadeByObj(fn)
-	return r
+	return fa.mustGetFacadeByObj(fn)
 }
 
 // IfaceNumEmbeddeds returns the number of embedded types in interface fa.

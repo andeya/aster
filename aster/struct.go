@@ -15,6 +15,7 @@
 package aster
 
 import (
+	"fmt"
 	"go/ast"
 	"go/types"
 	"sort"
@@ -27,26 +28,30 @@ import (
 
 // NOTE: Panic, if TypKind != Struct
 func (fa *facade) structure() *types.Struct {
-	obj := fa.typ().(*types.Struct)
+	typ := fa.typ()
+	t, ok := typ.(*types.Struct)
+	if !ok {
+		panic(fmt.Sprintf("aster: structure of non-Struct TypKind: %T", typ))
+	}
 	// initiate
 	if fa.structFields == nil {
-		numFields := obj.NumFields()
+		numFields := t.NumFields()
 		fa.structFields = make([]*StructField, numFields)
 		for expr, tv := range fa.pkg.info.Types {
-			if tv.Type == obj {
+			if tv.Type == t {
 				n, ok := expr.(*ast.StructType)
 				if !ok {
 					n = expr.(*ast.CompositeLit).Type.(*ast.StructType)
 				}
 				expandFields(n.Fields)
 				for i := 0; i < numFields; i++ {
-					fa.structFields[i] = fa.pkg.newStructField(n.Fields.List[i], obj.Field(i))
+					fa.structFields[i] = fa.pkg.newStructField(n.Fields.List[i], t.Field(i))
 				}
 				break
 			}
 		}
 	}
-	return obj
+	return t
 }
 
 // NumFields returns the number of fields in the struct (including blank and embedded fields).

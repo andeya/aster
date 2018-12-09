@@ -15,6 +15,7 @@
 package aster
 
 import (
+	"fmt"
 	"go/ast"
 	"go/types"
 	"strings"
@@ -89,6 +90,31 @@ type Facade interface {
 	// Implements reports whether it implements iface.
 	// NOTE: Panic, if iface TypKind != Interface
 	Implements(iface Facade, usePtr bool) bool
+
+	// Elem returns the element type.
+	// NOTE: Panic, if TypKind != (Array, Slice, Map, Chan and Pointer)
+	Elem() types.Type
+
+	// Key returns the key type of map.
+	// NOTE: Panic, if TypKind != Map
+	Key() types.Type
+
+	// Len returns the length of array, or the number variables of tuple.
+	// A negative result indicates an unknown length.
+	// NOTE: Panic, if TypKind != Array and TypKind != Tuple
+	Len() int64
+
+	// ChanDir returns the direction of channel.
+	// NOTE: Panic, if TypKind != Chan
+	ChanDir() types.ChanDir
+
+	// BasicInfo returns information about properties of basic type.
+	// NOTE: Panic, if TypKind != Basic
+	BasicInfo() types.BasicInfo
+
+	// BasicKind returns the kind of basic type.
+	// NOTE: Panic, if TypKind != Basic
+	BasicKind() types.BasicKind
 
 	// ----------------------------- TypKind = Signature (function) -----------------------------
 
@@ -168,50 +194,23 @@ type facade struct {
 
 var _ Facade = (*facade)(nil)
 
-func (p *PackageInfo) getFacade(ident *ast.Ident) (facade *facade, idx int) {
-	for idx, facade = range p.facades {
-		if facade.ident == ident {
-			return
-		}
-	}
-	return nil, -1
-}
-
-func (p *PackageInfo) getFacadeByObj(obj types.Object) (facade *facade, idx int) {
-	for idx, facade = range p.facades {
-		if facade.obj == obj {
-			return
-		}
-	}
-	return nil, -1
-}
-
-func (p *PackageInfo) getFacadeByType(t types.Type) (facade *facade, idx int) {
-	for idx, facade = range p.facades {
-		if facade.obj.Type() == t || facade.typ() == t {
-			return
-		}
-	}
-	return nil, -1
-}
-
-func (p *PackageInfo) addFacade(ident *ast.Ident, obj types.Object) {
-	p.facades = append(p.facades, &facade{
-		obj:   obj,
-		pkg:   p,
-		ident: ident,
-		doc:   p.docComment(ident),
-	})
-}
-
-func (p *PackageInfo) removeFacade(ident *ast.Ident) {
-	_, idx := p.getFacade(ident)
-	if idx >= 0 {
-		p.facades = append(p.facades[:idx], p.facades[idx+1:]...)
-	}
-}
-
 func (fa *facade) facadeIdentify() {}
+
+func (fa *facade) mustGetFacadeByObj(obj types.Object) *facade {
+	facade, idx := fa.pkg.getFacadeByObj(obj)
+	if idx < 0 {
+		panic(fmt.Sprintf("aster: mustGetFacadeByObj can't find %s", obj.String()))
+	}
+	return facade
+}
+
+func (fa *facade) mustGetFacadeByTyp(typ types.Type) *facade {
+	facade, idx := fa.pkg.getFacadeByTyp(typ)
+	if idx < 0 {
+		panic(fmt.Sprintf("aster: mustGetFacadeByTyp can't find %s", typ.String()))
+	}
+	return facade
+}
 
 // Ident returns the indent.
 func (fa *facade) Ident() *ast.Ident {
@@ -321,8 +320,7 @@ func (fa *facade) Method(i int) Facade {
 	if !ok {
 		return nil
 	}
-	r, _ := fa.pkg.getFacadeByObj(t.Method(i))
-	return r
+	return fa.mustGetFacadeByObj(t.Method(i))
 }
 
 // AssertableTo reports whether it can be asserted to have T's type.

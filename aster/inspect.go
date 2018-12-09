@@ -16,6 +16,7 @@ package aster
 
 import (
 	"go/ast"
+	"go/types"
 	"log"
 )
 
@@ -70,6 +71,17 @@ func (prog *Program) Lookup(objKindSet ObjKind, typKindSet TypKind, name string)
 	return
 }
 
+// FindFacade finds Facade by types.Type in the program.
+func (prog *Program) FindFacade(typ types.Type) (fa Facade, found bool) {
+	for _, pkg := range prog.allPackages {
+		fa, found = pkg.FindFacade(typ)
+		if found {
+			return
+		}
+	}
+	return
+}
+
 // Inspect traverses facades in the package.
 func (p *PackageInfo) Inspect(fn func(Facade) bool) {
 	for _, fa := range p.facades {
@@ -95,4 +107,53 @@ func (p *PackageInfo) Lookup(objKindSet ObjKind, typKindSet TypKind, name string
 		return true
 	})
 	return
+}
+
+// FindFacade finds Facade by types.Type in the package.
+func (p *PackageInfo) FindFacade(typ types.Type) (fa Facade, found bool) {
+	facade, idx := p.getFacadeByTyp(typ)
+	return facade, idx != -1
+}
+
+func (p *PackageInfo) getFacade(ident *ast.Ident) (facade *facade, idx int) {
+	for idx, facade = range p.facades {
+		if facade.ident == ident {
+			return
+		}
+	}
+	return nil, -1
+}
+
+func (p *PackageInfo) getFacadeByObj(obj types.Object) (facade *facade, idx int) {
+	for idx, facade = range p.facades {
+		if facade.obj == obj {
+			return
+		}
+	}
+	return nil, -1
+}
+
+func (p *PackageInfo) getFacadeByTyp(t types.Type) (facade *facade, idx int) {
+	for idx, facade = range p.facades {
+		if facade.obj.Type() == t || facade.typ() == t {
+			return
+		}
+	}
+	return nil, -1
+}
+
+func (p *PackageInfo) addFacade(ident *ast.Ident, obj types.Object) {
+	p.facades = append(p.facades, &facade{
+		obj:   obj,
+		pkg:   p,
+		ident: ident,
+		doc:   p.docComment(ident),
+	})
+}
+
+func (p *PackageInfo) removeFacade(ident *ast.Ident) {
+	_, idx := p.getFacade(ident)
+	if idx >= 0 {
+		p.facades = append(p.facades[:idx], p.facades[idx+1:]...)
+	}
 }

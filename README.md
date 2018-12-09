@@ -102,13 +102,13 @@ func F() {
 
 ## Task List
 
-- [ ] Basic
-- [ ] Array
-- [ ] Slice
+- [x] Basic
+- [x] Array
+- [x] Slice
 - [x] Struct
-- [ ] Pointer
-- [ ] Tuple
+- [x] Pointer
+- [x] Tuple
 - [x] Signature // non-builtin function or method
 - [x] Interface
-- [ ] Map
-- [ ] Chan
+- [x] Map
+- [x] Chan
