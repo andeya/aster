@@ -28,6 +28,8 @@ import (
 //  Objects of ObjKind=Bad are not collected;
 //
 type Facade interface {
+	facadeIdentify() // only as identify
+
 	// Ident returns the indent.
 	Ident() *ast.Ident
 
@@ -72,6 +74,19 @@ type Facade interface {
 
 	// Method returns the i'th method of named type t for 0 <= i < t.NumMethods().
 	Method(i int) Facade
+
+	// AssertableTo reports whether it can be asserted to have T's type.
+	AssertableTo(T Facade) bool
+
+	// AssignableTo reports whether it is assignable to a variable of T's type.
+	AssignableTo(T Facade) bool
+
+	// ConvertibleTo reports whether it is convertible to a value of T's type.
+	ConvertibleTo(T Facade) bool
+
+	// Implements reports whether it implements T.
+	// NOTE: the T's TypKind should be Interface.
+	Implements(T Facade) bool
 
 	// ----------------------------- TypKind = Signature (function) -----------------------------
 
@@ -160,6 +175,8 @@ func (p *PackageInfo) removeFacade(ident *ast.Ident) {
 		p.facades = append(p.facades[:idx], p.facades[idx+1:]...)
 	}
 }
+
+func (fa *facade) facadeIdentify() {}
 
 // Ident returns the indent.
 func (fa *facade) Ident() *ast.Ident {
@@ -268,4 +285,34 @@ func (fa *facade) Method(i int) Facade {
 	}
 	r, _ := fa.pkg.getFacadeByObj(t.Method(i))
 	return r
+}
+
+// AssertableTo reports whether it can be asserted to have T's type.
+// NOTE: the current Facade's TypKind should be Interface.
+func (fa *facade) AssertableTo(T Facade) bool {
+	iface, ok := fa.typ().(*types.Interface)
+	if !ok {
+		return false
+	}
+	return types.AssertableTo(iface, T.(*facade).typ())
+}
+
+// AssignableTo reports whether it is assignable to a variable of T's type.
+func (fa *facade) AssignableTo(T Facade) bool {
+	return types.AssignableTo(fa.typ(), T.(*facade).typ())
+}
+
+// ConvertibleTo reports whether it is convertible to a value of T's type.
+func (fa *facade) ConvertibleTo(T Facade) bool {
+	return types.ConvertibleTo(fa.typ(), T.(*facade).typ())
+}
+
+// Implements reports whether it implements T.
+// NOTE: the T's TypKind should be Interface.
+func (fa *facade) Implements(T Facade) bool {
+	iface, ok := T.(*facade).typ().(*types.Interface)
+	if !ok {
+		return false
+	}
+	return types.Implements(fa.typ(), iface)
 }
