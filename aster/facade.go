@@ -40,6 +40,7 @@ type Facade interface {
 	ObjKind() ObjKind
 
 	// TypKind returns what the facade type represents.
+	// NOTE: If the type is *type.Named, returns the underlying TypKind.
 	TypKind() TypKind
 
 	// Id is a wrapper for Id(obj.Pkg(), obj.Name()).
@@ -73,6 +74,7 @@ type Facade interface {
 	NumMethods() int
 
 	// Method returns the i'th method of named type t for 0 <= i < t.NumMethods().
+	// NOTE: the result's TypKind is Signature.
 	Method(i int) Facade
 
 	// AssertableTo reports whether it can be asserted to have T's type.
@@ -84,9 +86,9 @@ type Facade interface {
 	// ConvertibleTo reports whether it is convertible to a value of T's type.
 	ConvertibleTo(T Facade) bool
 
-	// Implements reports whether it implements T.
-	// NOTE: the T's TypKind should be Interface.
-	Implements(T Facade) bool
+	// Implements reports whether it implements iface.
+	// NOTE: Panic, if iface TypKind != Interface
+	Implements(iface Facade, usePtr bool) bool
 
 	// ----------------------------- TypKind = Signature (function) -----------------------------
 
@@ -130,6 +132,30 @@ type Facade interface {
 	// and a boolean indicating if the field was found.
 	// NOTE: Panic, if TypKind != Struct
 	FieldByName(name string) (field *StructField, found bool)
+
+	// ---------------------------------- TypKind = Interface ----------------------------------
+
+	// EmbeddedType returns the i'th embedded type of interface fa for 0 <= i < fa.NumEmbeddeds().
+	// NOTE: Panic, if TypKind != Interface
+	IfaceEmbeddedType(i int) Facade
+
+	// IfaceEmpty returns true if fa is the empty interface.
+	IfaceEmpty() bool
+
+	// IfaceExplicitMethod returns the i'th explicitly declared method of interface fa for 0 <= i < fa.NumExplicitMethods().
+	// The methods are ordered by their unique Id.
+	// NOTE:
+	//  Panic, if TypKind != Interface;
+	//  The result's TypKind is Signature.
+	IfaceExplicitMethod(i int) Facade
+
+	// IfaceNumEmbeddeds returns the number of embedded types in interface fa.
+	// NOTE: Panic, if TypKind != Interface
+	IfaceNumEmbeddeds() int
+
+	// IfaceNumExplicitMethods returns the number of explicitly declared methods of interface fa.
+	// NOTE: Panic, if TypKind != Interface
+	IfaceNumExplicitMethods() int
 }
 
 type facade struct {
@@ -154,6 +180,15 @@ func (p *PackageInfo) getFacade(ident *ast.Ident) (facade *facade, idx int) {
 func (p *PackageInfo) getFacadeByObj(obj types.Object) (facade *facade, idx int) {
 	for idx, facade = range p.facades {
 		if facade.obj == obj {
+			return
+		}
+	}
+	return nil, -1
+}
+
+func (p *PackageInfo) getFacadeByType(t types.Type) (facade *facade, idx int) {
+	for idx, facade = range p.facades {
+		if facade.obj.Type() == t || facade.typ() == t {
 			return
 		}
 	}
@@ -194,10 +229,12 @@ func (fa *facade) ObjKind() ObjKind {
 }
 
 // TypKind returns what the facade type represents.
+// NOTE: If the type is *type.Named, returns the underlying TypKind.
 func (fa *facade) TypKind() TypKind {
 	return GetTypKind(fa.typ())
 }
 
+// typKind returns real TypKind.
 func (fa *facade) typKind() TypKind {
 	if fa.ObjKind() == Bad {
 		return Invalid
@@ -278,6 +315,7 @@ func (fa *facade) NumMethods() int {
 }
 
 // Method returns the i'th method of named type t for 0 <= i < t.NumMethods().
+// NOTE: the result's TypKind is Signature.
 func (fa *facade) Method(i int) Facade {
 	t, ok := fa.getNamed()
 	if !ok {
@@ -307,12 +345,12 @@ func (fa *facade) ConvertibleTo(T Facade) bool {
 	return types.ConvertibleTo(fa.typ(), T.(*facade).typ())
 }
 
-// Implements reports whether it implements T.
-// NOTE: the T's TypKind should be Interface.
-func (fa *facade) Implements(T Facade) bool {
-	iface, ok := T.(*facade).typ().(*types.Interface)
-	if !ok {
-		return false
+// Implements reports whether it implements iface.
+// NOTE: Panic, if iface TypKind != Interface
+func (fa *facade) Implements(iface Facade, usePtr bool) bool {
+	t := fa.obj.Type()
+	if usePtr && fa.typKind() != Pointer {
+		t = types.NewPointer(t)
 	}
-	return types.Implements(fa.typ(), iface)
+	return types.Implements(t, iface.(*facade).iface())
 }

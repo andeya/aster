@@ -107,6 +107,6 @@ func F() {
 - [ ] Pointer
 - [ ] Tuple
 - [x] Signature // non-builtin function or method
-- [ ] Interface
+- [x] Interface
 - [ ] Map
 - [ ] Chan
