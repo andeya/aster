@@ -53,7 +53,7 @@ var (
 	`, "code text")
 )
 
-func setStructTag(obj aster.Object) bool {
+func setStructTag(fa aster.Facade) bool {
 	if fa.TypKind() != aster.Struct {
 		return true
 	}
