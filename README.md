@@ -4,10 +4,6 @@ Golang coding efficiency engine.
 
 [中文版](./README_ZH.md)
 
-## Status
-
-Under development, not for production...
-
 ## Feature
 
 - Convert the AST to `reflect.Type`-like types(Kind-Flags), as it would at runtime
