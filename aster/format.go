@@ -25,6 +25,7 @@ import (
 	"strings"
 
 	"github.com/henrylee2cn/goutil"
+	"golang.org/x/tools/imports"
 )
 
 // Format formats the created and imported packages, and returns the string.
@@ -49,11 +50,17 @@ func (prog *Program) Format() (codes map[string]string, first error) {
 func (p *PackageInfo) Format() (codes map[string]string, first error) {
 	codes = make(map[string]string, len(p.files))
 	var code string
+	var result []byte
 	for _, f := range p.files {
 		code, first = p.FormatNode(f)
 		if first != nil {
 			return
 		}
+		result, first = imports.Process("", goutil.StringToBytes(code), nil)
+		if first != nil {
+			return
+		}
+		code = goutil.BytesToString(result)
 		codes[p.prog.filenames[f]] = code
 	}
 	return
