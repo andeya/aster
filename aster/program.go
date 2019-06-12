@@ -22,6 +22,8 @@ import (
 	"go/parser"
 	"go/token"
 	"go/types"
+	"os"
+	"path/filepath"
 	"strings"
 
 	"golang.org/x/tools/go/loader"
@@ -73,6 +75,32 @@ type Program struct {
 //
 func LoadFile(filename string, src interface{}) (*Program, error) {
 	return NewProgram().AddFile(filename, src).Load()
+}
+
+// LoadDirs parses the source code of Go files under the directories and loads a new program.
+func LoadDirs(dirs ...string) (*Program, error) {
+	p := NewProgram()
+	for _, dir := range dirs {
+		if !filepath.IsAbs(dir) {
+			dir, _ = filepath.Abs(dir)
+		}
+		err := filepath.Walk(dir, func(path string, f os.FileInfo, err error) error {
+			if err != nil {
+				return err
+			}
+			if f.IsDir() {
+				return nil
+			}
+			if strings.HasSuffix(path, ".go") {
+				p.AddFile(path, nil)
+			}
+			return nil
+		})
+		if err != nil {
+			return nil, err
+		}
+	}
+	return p.Load()
 }
 
 // LoadPkgs imports packages and loads a new program.

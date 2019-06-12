@@ -17,11 +17,10 @@ package aster
 import (
 	"go/ast"
 	"go/types"
-	"log"
 )
 
 func (p *PackageInfo) check() {
-	log.Printf("Checking package %s...", p.String())
+	// log.Printf("Checking package %s...", p.String())
 L:
 	for ident, obj := range p.info.Defs {
 		switch GetObjKind(obj) {
