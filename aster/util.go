@@ -11,6 +11,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"regexp"
 	"runtime"
 	"strconv"
 	"strings"
@@ -19,6 +20,17 @@ import (
 
 	"golang.org/x/tools/go/ast/astutil"
 )
+
+var pkglineRegexp = regexp.MustCompile("\n*package[\t ]+[^/\n]+[/\n]")
+
+func changePkgName(code string, pkgname string) string {
+	s := strings.TrimSpace(pkglineRegexp.FindString(code))
+	s = strings.TrimSpace(strings.TrimRight(s, "/"))
+	if s == "" {
+		return code
+	}
+	return strings.Replace(code, s, "package "+pkgname, 1)
+}
 
 func cloneIdent(i *ast.Ident) *ast.Ident {
 	return &ast.Ident{

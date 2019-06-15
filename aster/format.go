@@ -50,18 +50,20 @@ func (prog *Program) Format() (codes map[string]string, first error) {
 func (p *PackageInfo) Format() (codes map[string]string, first error) {
 	codes = make(map[string]string, len(p.files))
 	var code string
-	var result []byte
+	var codeBytes []byte
+	pkgName := p.Pkg.Name()
 	for _, f := range p.files {
 		code, first = p.FormatNode(f)
 		if first != nil {
 			return
 		}
-		result, first = imports.Process("", goutil.StringToBytes(code), nil)
+		code = changePkgName(code, pkgName)
+		fmt.Println(code)
+		codeBytes, first = imports.Process("", goutil.StringToBytes(code), nil)
 		if first != nil {
 			return
 		}
-		code = goutil.BytesToString(result)
-		codes[p.prog.filenames[f]] = code
+		codes[p.prog.filenames[f]] = goutil.BytesToString(codeBytes)
 	}
 	return
 }
