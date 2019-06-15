@@ -58,7 +58,6 @@ func (p *PackageInfo) Format() (codes map[string]string, first error) {
 			return
 		}
 		code = changePkgName(code, pkgName)
-		fmt.Println(code)
 		codeBytes, first = imports.Process("", goutil.StringToBytes(code), nil)
 		if first != nil {
 			return
