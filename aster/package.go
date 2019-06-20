@@ -19,8 +19,8 @@ import (
 	"go/token"
 	"go/types"
 
+	"github.com/henrylee2cn/aster/aster/loader"
 	"golang.org/x/tools/go/ast/astutil"
-	"golang.org/x/tools/go/loader"
 )
 
 // PackageInfo holds the ASTs and facts derived by the type-checker
@@ -31,11 +31,11 @@ import (
 type PackageInfo struct {
 	prog                  *Program
 	Pkg                   *types.Package
-	importable            bool        // true if 'import "Pkg.Path()"' would resolve to this
-	transitivelyErrorFree bool        // true if Pkg and all its dependencies are free of errors
-	files                 []*ast.File // syntax trees for the package's files
-	Errors                []error     // non-nil if the package had errors
-	info                  types.Info  // type-checker deductions.
+	importable            bool           // true if 'import "Pkg.Path()"' would resolve to this
+	transitivelyErrorFree bool           // true if Pkg and all its dependencies are free of errors
+	files                 []*loader.File // syntax trees for the package's files
+	Errors                []error        // non-nil if the package had errors
+	info                  types.Info     // type-checker deductions.
 	facades               []*facade
 }
 
@@ -80,7 +80,7 @@ func (p *PackageInfo) pathEnclosingInterval(start, end token.Pos) (path []ast.No
 		if !tokenFileContainsPos(p.prog.fset.File(f.Pos()), start) {
 			continue
 		}
-		if path, exact := astutil.PathEnclosingInterval(f, start, end); path != nil {
+		if path, exact := astutil.PathEnclosingInterval(f.File, start, end); path != nil {
 			return path, exact
 		}
 	}

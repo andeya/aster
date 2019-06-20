@@ -23,7 +23,8 @@ import (
 
 var pkglineRegexp = regexp.MustCompile("\n*package[\t ]+[^/\n]+[/\n]")
 
-func changePkgName(code string, pkgname string) string {
+// ChangePkgName change package name of the code and return the new code.
+func ChangePkgName(code string, pkgname string) string {
 	s := strings.TrimSpace(pkglineRegexp.FindString(code))
 	s = strings.TrimSpace(strings.TrimRight(s, "/"))
 	if s == "" {

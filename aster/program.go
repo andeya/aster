@@ -26,7 +26,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"golang.org/x/tools/go/loader"
+	"github.com/henrylee2cn/aster/aster/loader"
 )
 
 // A Program is a Go program loaded from source.
@@ -58,8 +58,6 @@ type Program struct {
 	// encountered by Load: all initial packages and all
 	// dependencies, including incomplete ones.
 	allPackages map[*types.Package]*PackageInfo
-
-	filenames map[*ast.File]string
 
 	// We use token.File, not filename, since a file may appear to
 	// belong to multiple packages and be parsed more than once.
@@ -130,9 +128,8 @@ func LoadPkgsWithTests(pkgPath ...string) (*Program, error) {
 // NewProgram creates a empty program.
 func NewProgram() *Program {
 	prog := new(Program)
-	prog.filenames = make(map[*ast.File]string, 128)
 	prog.filesToUpdate = make(map[*token.File]bool, 128)
-	prog.conf.ParserMode = parser.ParseComments
+	prog.conf.ParserMode = parser.ParseComments | parser.AllErrors
 	// Optimization: don't type-check the bodies of functions in our
 	// dependencies, since we only need exported package members.
 	prog.conf.TypeCheckFuncBodies = func(p string) bool {
@@ -155,6 +152,7 @@ func NewProgram() *Program {
 	// the loader's error checking but allow soft errors.
 	// It would be nice if the loader API permitted "AllowErrors: soft".
 	prog.conf.AllowErrors = true
+	prog.conf.TypeChecker.DisableUnusedImportCheck = true
 	return prog
 }
 
@@ -176,8 +174,7 @@ func (prog *Program) AddFile(filename string, src interface{}) (itself *Program)
 			if filename == "" {
 				filename = autoFilename(f)
 			}
-			prog.filenames[f] = filename
-			prog.conf.CreateFromFiles(f.Name.Name, f)
+			prog.conf.CreateFromFiles(f.Name.Name, &loader.File{Filename: filename, File: f})
 		}
 	}
 	return prog

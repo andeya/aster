@@ -53,16 +53,16 @@ func (p *PackageInfo) Format() (codes map[string]string, first error) {
 	var codeBytes []byte
 	pkgName := p.Pkg.Name()
 	for _, f := range p.files {
-		code, first = p.FormatNode(f)
+		code, first = p.FormatNode(f.File)
 		if first != nil {
 			return
 		}
-		code = changePkgName(code, pkgName)
+		code = ChangePkgName(code, pkgName)
 		codeBytes, first = imports.Process("", goutil.StringToBytes(code), nil)
 		if first != nil {
 			return
 		}
-		codes[p.prog.filenames[f]] = goutil.BytesToString(codeBytes)
+		codes[f.Filename] = goutil.BytesToString(codeBytes)
 	}
 	return
 }

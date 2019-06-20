@@ -23,7 +23,7 @@ func TestChangePkgName(t *testing.T) {
 		{"package    abc // comment\n", "xyz", "package xyz // comment\n"},
 	}
 	for _, c := range cases {
-		actual := changePkgName(c.code, c.pkgname)
+		actual := ChangePkgName(c.code, c.pkgname)
 		assert.Equal(t, c.expected, actual)
 	}
 }
