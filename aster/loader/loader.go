@@ -29,6 +29,9 @@ var ignoreVendor build.ImportMode
 
 const trace = false // show timing info for type-checking
 
+// File the 'ast.File' with filename
+type File = cgo.File
+
 // Config specifies the configuration for loading a whole program from
 // Go source code.
 // The zero value for Config is a ready-to-use default configuration.

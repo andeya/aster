@@ -66,6 +66,7 @@ import (
 	"strings"
 )
 
+// File the 'ast.File' with filename
 type File struct {
 	Filename string
 	*ast.File

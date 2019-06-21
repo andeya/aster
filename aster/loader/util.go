@@ -14,15 +14,12 @@ import (
 	"strconv"
 	"sync"
 
-	"github.com/henrylee2cn/aster/aster/internal/cgo"
 	"golang.org/x/tools/go/buildutil"
 )
 
 // We use a counting semaphore to limit
 // the number of parallel I/O calls per process.
 var ioLimit = make(chan bool, 10)
-
-type File = cgo.File
 
 // parseFiles parses the Go source files within directory dir and
 // returns the ASTs of the ones that could be at least partially parsed,
