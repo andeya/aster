@@ -5,9 +5,13 @@
 package aster
 
 import (
+	"bytes"
+	"errors"
 	"go/ast"
 	"go/token"
 	"go/types"
+	"io"
+	"io/ioutil"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -18,10 +22,11 @@ import (
 	"sync/atomic"
 	"unicode"
 
+	"github.com/henrylee2cn/goutil"
 	"golang.org/x/tools/go/ast/astutil"
 )
 
-var pkglineRegexp = regexp.MustCompile("\n*package[\t ]+[^/\n]+[/\n]")
+var pkglineRegexp = regexp.MustCompile("\n*package[\t ]+([^/\n]+)[/\n]")
 
 // ChangePkgName change package name of the code and return the new code.
 func ChangePkgName(code string, pkgname string) string {
@@ -31,6 +36,63 @@ func ChangePkgName(code string, pkgname string) string {
 		return code
 	}
 	return strings.Replace(code, s, "package "+pkgname, 1)
+}
+
+// PkgName get the package name of the code, file or directory.
+// NOTE:
+//  If src==nil, find the package name from the file or directory specified by 'filenameOrDirectory';
+//  If src!=nil, find the package name from the code represented by 'src'.
+func PkgName(filenameOrDirectory string, src interface{}) (string, error) {
+	if src == nil {
+		existed, isDir := goutil.FileExist(filenameOrDirectory)
+		if !existed {
+			return "", errors.New("file or directory is not existed")
+		}
+		if isDir {
+			err := filepath.Walk(filenameOrDirectory, func(path string, f os.FileInfo, err error) error {
+				if err != nil || f.IsDir() {
+					return nil
+				}
+				if strings.HasSuffix(path, ".go") {
+					filenameOrDirectory = path
+					return errors.New("")
+				}
+				return nil
+			})
+			if err == nil || err.Error() != "" {
+				return "", err
+			}
+		}
+	}
+	b, err := readSource(filenameOrDirectory, src)
+	if err != nil {
+		return "", err
+	}
+	r := pkglineRegexp.FindSubmatch(b)
+	if len(r) < 2 {
+		return "", nil
+	}
+	return goutil.BytesToString(bytes.TrimSpace(r[1])), nil
+}
+
+func readSource(filename string, src interface{}) ([]byte, error) {
+	if src != nil {
+		switch s := src.(type) {
+		case string:
+			return []byte(s), nil
+		case []byte:
+			return s, nil
+		case *bytes.Buffer:
+			// is io.Reader, but src is already available in []byte form
+			if s != nil {
+				return s.Bytes(), nil
+			}
+		case io.Reader:
+			return ioutil.ReadAll(s)
+		}
+		return nil, errors.New("invalid source")
+	}
+	return ioutil.ReadFile(filename)
 }
 
 func cloneIdent(i *ast.Ident) *ast.Ident {
