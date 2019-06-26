@@ -52,3 +52,20 @@ func TestPkgName(t *testing.T) {
 		assert.Equal(t, c.expected, actual)
 	}
 }
+
+func TestFormat(t *testing.T) {
+	const code = `
+	package z
+	import "fmt"
+	var a=0
+	`
+	const expected = `package z
+
+var a = 0
+`
+
+	b, err := Format("", code, nil)
+	assert.NoError(t, err)
+	actual := string(b)
+	assert.Equal(t, expected, actual)
+}

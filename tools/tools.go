@@ -32,8 +32,12 @@ type Options = imports.Options
 // Note that filename's directory influences which imports can be chosen,
 // so it is important that filename be accurate.
 // To process data ``as if'' it were in filename, pass the data as a non-nil src.
-func Format(filename string, src []byte, opt *Options) ([]byte, error) {
-	return imports.Process("", src, nil)
+func Format(filename string, src interface{}, opt *Options) ([]byte, error) {
+	b, err := readSourceBytes(src)
+	if err != nil {
+		return nil, err
+	}
+	return imports.Process(filename, b, nil)
 }
 
 var pkglineRegexp = regexp.MustCompile("\n*package[\t ]+([^/\n]+)[/\n]")
@@ -86,21 +90,31 @@ func PkgName(filenameOrDirectory string, src interface{}) (string, error) {
 }
 
 func readSource(filename string, src interface{}) ([]byte, error) {
-	if src != nil {
-		switch s := src.(type) {
-		case string:
-			return []byte(s), nil
-		case []byte:
-			return s, nil
-		case *bytes.Buffer:
-			// is io.Reader, but src is already available in []byte form
-			if s != nil {
-				return s.Bytes(), nil
-			}
-		case io.Reader:
-			return ioutil.ReadAll(s)
-		}
-		return nil, errors.New("invalid source")
+	b, err := readSourceBytes(src)
+	if err != nil {
+		return nil, err
+	}
+	if b != nil {
+		return b, nil
 	}
 	return ioutil.ReadFile(filename)
+}
+
+func readSourceBytes(src interface{}) ([]byte, error) {
+	switch s := src.(type) {
+	case nil:
+		return nil, nil
+	case string:
+		return []byte(s), nil
+	case []byte:
+		return s, nil
+	case *bytes.Buffer:
+		// is io.Reader, but src is already available in []byte form
+		if s != nil {
+			return s.Bytes(), nil
+		}
+	case io.Reader:
+		return ioutil.ReadAll(s)
+	}
+	return nil, errors.New("invalid source")
 }
