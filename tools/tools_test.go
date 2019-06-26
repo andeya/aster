@@ -43,8 +43,8 @@ func TestPkgName(t *testing.T) {
 		{"", "package abc//\n", "abc"},
 		{"", "package abc //\n", "abc"},
 		{"", "package    abc // comment\n", "abc"},
-		{"util.go", nil, "aster"},
-		{"./", nil, "aster"},
+		{"tools.go", nil, "tools"},
+		{"./", nil, "tools"},
 	}
 	for _, c := range cases {
 		actual, err := PkgName(c.filenameOrDirectory, c.src)
