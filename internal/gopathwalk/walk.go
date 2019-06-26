@@ -17,7 +17,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/henrylee2cn/aster/aster/internal/fastwalk"
+	"github.com/henrylee2cn/aster/internal/fastwalk"
 )
 
 // Options controls the behavior of a Walk call.

@@ -26,9 +26,9 @@ import (
 	"unicode"
 	"unicode/utf8"
 
-	"github.com/henrylee2cn/aster/aster/internal/astutil"
-	"github.com/henrylee2cn/aster/aster/internal/gopathwalk"
-	"github.com/henrylee2cn/aster/aster/internal/packages"
+	"github.com/henrylee2cn/aster/internal/astutil"
+	"github.com/henrylee2cn/aster/internal/gopathwalk"
+	"github.com/henrylee2cn/aster/internal/packages"
 )
 
 // Debug controls verbose logging.

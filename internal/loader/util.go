@@ -14,7 +14,7 @@ import (
 	"strconv"
 	"sync"
 
-	"github.com/henrylee2cn/aster/aster/internal/buildutil"
+	"github.com/henrylee2cn/aster/internal/buildutil"
 )
 
 // We use a counting semaphore to limit

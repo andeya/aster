@@ -19,8 +19,8 @@ import (
 	"go/token"
 	"go/types"
 
-	"github.com/henrylee2cn/aster/aster/internal/astutil"
-	"github.com/henrylee2cn/aster/aster/internal/loader"
+	"github.com/henrylee2cn/aster/internal/astutil"
+	"github.com/henrylee2cn/aster/internal/loader"
 )
 
 // PackageInfo holds the ASTs and facts derived by the type-checker

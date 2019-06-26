@@ -24,7 +24,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/henrylee2cn/aster/aster/internal/imports"
+	"github.com/henrylee2cn/aster/tools"
 	"github.com/henrylee2cn/goutil"
 )
 
@@ -57,8 +57,8 @@ func (p *PackageInfo) Format() (codes map[string]string, first error) {
 		if first != nil {
 			return
 		}
-		code = ChangePkgName(code, pkgName)
-		codeBytes, first = imports.Process("", goutil.StringToBytes(code), nil)
+		code = tools.ChangePkgName(code, pkgName)
+		codeBytes, first = tools.Format("", goutil.StringToBytes(code), nil)
 		if first != nil {
 			return
 		}

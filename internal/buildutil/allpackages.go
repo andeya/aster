@@ -127,8 +127,8 @@ func allPackages(ctxt *build.Context, root string, ch chan<- item) {
 // ExpandPatterns returns the set of packages matched by patterns,
 // which may have the following forms:
 //
-//		github.com/henrylee2cn/aster/aster/internal/cmd/guru     # a single package
-//		github.com/henrylee2cn/aster/aster/internal/...          # all packages beneath dir
+//		github.com/henrylee2cn/aster/internal/cmd/guru     # a single package
+//		github.com/henrylee2cn/aster/internal/...          # all packages beneath dir
 //		...                             # the entire workspace.
 //
 // Order is significant: a pattern preceded by '-' removes matching

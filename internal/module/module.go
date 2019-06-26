@@ -24,7 +24,7 @@ import (
 	"unicode"
 	"unicode/utf8"
 
-	"github.com/henrylee2cn/aster/aster/internal/semver"
+	"github.com/henrylee2cn/aster/internal/semver"
 )
 
 // A Version is defined by a module path and version pair.

@@ -21,9 +21,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/henrylee2cn/aster/aster/internal/gopathwalk"
-	"github.com/henrylee2cn/aster/aster/internal/packagesdriver"
-	"github.com/henrylee2cn/aster/aster/internal/semver"
+	"github.com/henrylee2cn/aster/internal/gopathwalk"
+	"github.com/henrylee2cn/aster/internal/packagesdriver"
+	"github.com/henrylee2cn/aster/internal/semver"
 )
 
 // debug controls verbose logging.

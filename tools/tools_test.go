@@ -1,4 +1,4 @@
-package aster
+package tools
 
 import (
 	"testing"

@@ -22,7 +22,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/henrylee2cn/aster/aster/internal/gcexportdata"
+	"github.com/henrylee2cn/aster/internal/gcexportdata"
 )
 
 // A LoadMode specifies the amount of detail to return when loading.
