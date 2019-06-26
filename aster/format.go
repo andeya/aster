@@ -24,8 +24,8 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/henrylee2cn/aster/aster/internal/imports"
 	"github.com/henrylee2cn/goutil"
-	"golang.org/x/tools/imports"
 )
 
 // Format formats the created and imported packages, and returns the string.

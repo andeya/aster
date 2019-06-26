@@ -26,7 +26,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/henrylee2cn/aster/aster/loader"
+	"github.com/henrylee2cn/aster/aster/internal/loader"
 )
 
 // A Program is a Go program loaded from source.

@@ -23,7 +23,7 @@ import (
 	"unicode"
 
 	"github.com/henrylee2cn/goutil"
-	"golang.org/x/tools/go/ast/astutil"
+	"github.com/henrylee2cn/aster/aster/internal/astutil"
 )
 
 var pkglineRegexp = regexp.MustCompile("\n*package[\t ]+([^/\n]+)[/\n]")
@@ -187,7 +187,7 @@ func isDigit(ch rune) bool {
 	return '0' <= ch && ch <= '9' || ch >= 0x80 && unicode.IsDigit(ch)
 }
 
-// -- Plundered from golang.org/x/tools/cmd/guru -----------------
+// -- Plundered from github.com/henrylee2cn/aster/aster/internal/cmd/guru -----------------
 
 // sameFile returns true if x and y have the same basename and denote
 // the same file.
