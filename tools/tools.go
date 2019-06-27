@@ -14,6 +14,30 @@ import (
 	"github.com/henrylee2cn/goutil"
 )
 
+// MkdirAll creates a directory named path,
+// along with any necessary parents, and returns nil,
+// or else returns an error.
+// The permission bits perm (before umask) are used for all
+// directories that MkdirAll creates.
+// If path is already a directory, MkdirAll does nothing
+// and returns nil.
+// If perm is empty, default use 0755.
+func MkdirAll(path string, perm ...os.FileMode) error {
+	return goutil.MkdirAll(path, perm...)
+}
+
+// WriteFile write file, and automatically creates the directory if necessary.
+// NOTE:
+//  If perm is empty, automatically determine the file permissions based on extension.
+func WriteFile(filename string, data []byte, perm ...os.FileMode) error {
+	return goutil.WriteFile(filename, data, perm...)
+}
+
+// RewriteFile rewrite file.
+func RewriteFile(name string, fn func(content []byte) (newContent []byte, err error)) error {
+	return goutil.RewriteFile(name, fn)
+}
+
 // Options specifies options for processing files.
 //
 // type Options struct {
@@ -50,30 +74,6 @@ func ChangePkgName(code string, pkgname string) string {
 		return code
 	}
 	return strings.Replace(code, s, "package "+pkgname, 1)
-}
-
-// MkdirAll creates a directory named path,
-// along with any necessary parents, and returns nil,
-// or else returns an error.
-// The permission bits perm (before umask) are used for all
-// directories that MkdirAll creates.
-// If path is already a directory, MkdirAll does nothing
-// and returns nil.
-// If perm is empty, default use 0755.
-func MkdirAll(path string, perm ...os.FileMode) error {
-	return goutil.MkdirAll(path, perm...)
-}
-
-// WriteFile write file, and automatically creates the directory if necessary.
-// NOTE:
-//  If perm is empty, automatically determine the file permissions based on extension.
-func WriteFile(filename string, data []byte, perm ...os.FileMode) error {
-	return goutil.WriteFile(filename, data, perm...)
-}
-
-// RewriteFile rewrite file.
-func RewriteFile(name string, fn func(content []byte) (newContent []byte, err error)) error {
-	return goutil.RewriteFile(name, fn)
 }
 
 // PkgName get the package name of the code, file or directory.
