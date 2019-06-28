@@ -31,6 +31,9 @@ import (
 type Facade interface {
 	facadeIdentify() // only as identify
 
+	// Filename returns the file name where it is located.
+	Filename() string
+
 	// Ident returns the indent.
 	Ident() *ast.Ident
 
@@ -210,6 +213,10 @@ func (fa *facade) mustGetFacadeByTyp(typ types.Type) *facade {
 		panic(fmt.Sprintf("aster: mustGetFacadeByTyp can't find %s", typ.String()))
 	}
 	return facade
+}
+
+func (fa *facade) Filename() string {
+	return fa.pkg.prog.fset.File(fa.ident.Pos()).Name()
 }
 
 // Ident returns the indent.

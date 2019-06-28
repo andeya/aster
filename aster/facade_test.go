@@ -2,6 +2,7 @@ package aster_test
 
 import (
 	"fmt"
+	"path/filepath"
 	"testing"
 
 	"github.com/henrylee2cn/aster/aster"
@@ -33,6 +34,28 @@ package test
 		S2
 	)
 `
+
+func TestFilename(t *testing.T) {
+	want := "../_out/inspect1.go"
+	prog, _ := aster.LoadFile(want, src)
+	prog.Inspect(func(fa aster.Facade) bool {
+		if fa.Filename() != want {
+			t.Fatalf("want:%s, got:%s", want, fa.Filename())
+		}
+		return true
+	})
+	want, err := filepath.Abs("../_out/struct.go")
+	if err != nil {
+		t.Fatal(err)
+	}
+	prog, _ = aster.LoadPkgs("../_out/")
+	prog.Inspect(func(fa aster.Facade) bool {
+		if fa.Filename() != want {
+			t.Fatalf("want:%s, got:%s", want, fa.Filename())
+		}
+		return true
+	})
+}
 
 func TestInspect(t *testing.T) {
 	prog, _ := aster.LoadFile("../_out/inspect1.go", src)
