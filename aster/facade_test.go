@@ -48,6 +48,15 @@ func TestFilename(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+
+	prog, _ = aster.LoadDirs("../_out/")
+	prog.Inspect(func(fa aster.Facade) bool {
+		if fa.Filename() != want {
+			t.Fatalf("want:%s, got:%s", want, fa.Filename())
+		}
+		return true
+	})
+
 	prog, _ = aster.LoadPkgs("../_out/")
 	prog.Inspect(func(fa aster.Facade) bool {
 		if fa.Filename() != want {

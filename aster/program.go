@@ -83,10 +83,7 @@ func LoadDirs(dirs ...string) (*Program, error) {
 			dir, _ = filepath.Abs(dir)
 		}
 		err := filepath.Walk(dir, func(path string, f os.FileInfo, err error) error {
-			if err != nil {
-				return err
-			}
-			if f.IsDir() {
+			if err != nil || f.IsDir() {
 				return nil
 			}
 			if strings.HasSuffix(path, ".go") {
