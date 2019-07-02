@@ -196,42 +196,15 @@ func (s *Tags) reparse() (err error) {
 	return err
 }
 
-func (s *Tags) resetValue() {
-	sort.Sort(s.tags)
-	value := s.tags.String()
-	if value == "" {
-		s.field.Tag = nil
-	} else {
-		if s.field.Tag == nil {
-			s.field.Tag = &ast.BasicLit{}
-		}
-		s.field.Tag.Value = "`" + value + "`"
-	}
+// String reassembles the tags into a valid literal tag field representation
+func (s *Tags) String() string {
+	return s.tags.String()
 }
 
 // Tags returns a slice of tags. The order is the original tag order unless it
 // was changed.
 func (s *Tags) Tags() []*Tag {
 	return s.tags.Tags()
-}
-
-// AddOptions adds the given option for the given key. If the option already
-// exists it doesn't add it again.
-func (s *Tags) AddOptions(key string, options ...string) {
-	s.tags.AddOptions(key, options...)
-	s.resetValue()
-}
-
-// Delete deletes the tag for the given keys
-func (s *Tags) Delete(keys ...string) {
-	s.tags.Delete(keys...)
-	s.resetValue()
-}
-
-// DeleteOptions deletes the given options for the given key
-func (s *Tags) DeleteOptions(key string, options ...string) {
-	s.tags.DeleteOptions(key, options...)
-	s.resetValue()
 }
 
 // Get returns the tag associated with the given key. If the key is present
@@ -248,18 +221,54 @@ func (s *Tags) Keys() []string {
 	return s.tags.Keys()
 }
 
-// Set sets the given tag. If the tag key already exists it'll override it
+// Set sets the given tag. If the tag key already exists it'll override it.
+// NOTE:
+//  Automatically call the Flush method.
 func (s *Tags) Set(tag *Tag) error {
 	err := s.tags.Set(tag)
 	if err == nil {
-		s.resetValue()
+		s.Flush()
 	}
 	return err
 }
 
-// String reassembles the tags into a valid literal tag field representation
-func (s *Tags) String() string {
-	return s.tags.String()
+// Delete deletes the tag for the given keys.
+// NOTE:
+//  Automatically call the Flush method.
+func (s *Tags) Delete(keys ...string) {
+	s.tags.Delete(keys...)
+	s.Flush()
+}
+
+// AddOptions adds the given option for the given key. If the option already
+// exists it doesn't add it again.
+// NOTE:
+//  Automatically call the Flush method.
+func (s *Tags) AddOptions(key string, options ...string) {
+	s.tags.AddOptions(key, options...)
+	s.Flush()
+}
+
+// DeleteOptions deletes the given options for the given key.
+// NOTE:
+//  Automatically call the Flush method.
+func (s *Tags) DeleteOptions(key string, options ...string) {
+	s.tags.DeleteOptions(key, options...)
+	s.Flush()
+}
+
+// Flush resets the tags object into the struct field.
+func (s *Tags) Flush() {
+	sort.Sort(s.tags)
+	value := s.tags.String()
+	if value == "" {
+		s.field.Tag = nil
+	} else {
+		if s.field.Tag == nil {
+			s.field.Tag = &ast.BasicLit{}
+		}
+		s.field.Tag.Value = "`" + value + "`"
+	}
 }
 
 func expandFields(fieldList *ast.FieldList) {
