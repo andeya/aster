@@ -19,6 +19,7 @@ import (
 	"errors"
 	"fmt"
 	"go/ast"
+	"go/build"
 	"go/parser"
 	"go/token"
 	"go/types"
@@ -27,6 +28,7 @@ import (
 	"strings"
 
 	"github.com/henrylee2cn/aster/internal/loader"
+	"github.com/henrylee2cn/goutil"
 )
 
 // A Program is a Go program loaded from source.
@@ -78,16 +80,22 @@ func LoadFile(filename string, src interface{}) (*Program, error) {
 // LoadDirs parses the source code of Go files under the directories and loads a new program.
 func LoadDirs(dirs ...string) (*Program, error) {
 	p := NewProgram()
+	srcs, _ := goutil.StringsConvert(build.Default.SrcDirs(), func(s string) (string, error) {
+		return s + string(filepath.Separator), nil
+	})
 	for _, dir := range dirs {
 		if !filepath.IsAbs(dir) {
 			dir, _ = filepath.Abs(dir)
 		}
 		err := filepath.Walk(dir, func(path string, f os.FileInfo, err error) error {
-			if err != nil || f.IsDir() {
+			if err != nil || !f.IsDir() {
 				return nil
 			}
-			if strings.HasSuffix(path, ".go") {
-				p.AddFile(path, nil)
+			for _, src := range srcs {
+				pkg := strings.TrimPrefix(path, src)
+				if pkg != path {
+					p.Import(pkg)
+				}
 			}
 			return nil
 		})
