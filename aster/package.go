@@ -52,6 +52,12 @@ func newPackageInfo(prog *Program, pkg *loader.PackageInfo) *PackageInfo {
 	}
 }
 
+// Program returns the program.
+func (p *PackageInfo) Program() *Program {
+	return p.prog
+}
+
+// PackageInfo returns the package path.
 func (p *PackageInfo) String() string {
 	return p.Pkg.Path()
 }

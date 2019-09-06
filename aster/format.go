@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"go/ast"
 	"go/format"
+	"go/token"
 	"os"
 	"path/filepath"
 	"sort"
@@ -69,17 +70,26 @@ func (p *PackageInfo) Format() (codes map[string]string, first error) {
 
 // FormatNode formats the node and returns the string.
 func (prog *Program) FormatNode(node ast.Node) (string, error) {
-	var dst bytes.Buffer
-	err := format.Node(&dst, prog.fset, node)
-	if err != nil {
-		return "", err
-	}
-	return goutil.BytesToString(dst.Bytes()), nil
+	return formatNode(prog.fset, node)
 }
 
 // FormatNode formats the node and returns the string.
 func (p *PackageInfo) FormatNode(node ast.Node) (string, error) {
 	return p.prog.FormatNode(node)
+}
+
+// FormatNode formats the node and returns the string.
+func (f *File) FormatNode(node ast.Node) (string, error) {
+	return f.PackageInfo.FormatNode(node)
+}
+
+func formatNode(fset *token.FileSet, node ast.Node) (string, error) {
+	var dst bytes.Buffer
+	err := format.Node(&dst, fset, node)
+	if err != nil {
+		return "", err
+	}
+	return goutil.BytesToString(dst.Bytes()), nil
 }
 
 // Rewrite formats the created and imported packages codes and writes to local files.

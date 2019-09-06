@@ -15,6 +15,7 @@
 package aster
 
 import (
+	"fmt"
 	"go/ast"
 	"go/types"
 
@@ -32,18 +33,19 @@ L:
 		case Bad, Lbl, Bui, Nil:
 			continue L
 		case Var:
-			if GetTypKind(obj.Type()) == Struct {
+			if GetTypKind(obj.Type()) != Struct {
+				file, nodes, _ = p.pathEnclosingInterval(ident.Pos(), ident.End())
+				for i, n := range nodes {
+					if i == 1 {
+						node = n
+					}
+					if _, ok := n.(*ast.Field); ok {
+						continue L
+					}
+				}
 				break
 			}
-			file, nodes, _ = p.pathEnclosingInterval(ident.Pos(), ident.End())
-			for i, n := range nodes {
-				if i == 1 {
-					node = n
-				}
-				if _, ok := n.(*ast.Field); ok {
-					continue L
-				}
-			}
+			fallthrough
 		default:
 			file, nodes, _ = p.pathEnclosingInterval(ident.Pos(), ident.End())
 			for i, n := range nodes {
@@ -53,7 +55,11 @@ L:
 				}
 			}
 		}
-		p.addFacade(file, node, ident, obj)
+		if file != nil {
+			p.addFacade(file, node, ident, obj)
+		} else {
+			fmt.Println("file==nil:", obj, node)
+		}
 	}
 }
 
@@ -159,7 +165,11 @@ func (p *PackageInfo) getFacadeByTyp(t types.Type) (facade *facade, idx int) {
 
 func (p *PackageInfo) addFacade(file *loader.File, node ast.Node, ident *ast.Ident, obj types.Object) {
 	p.facades = append(p.facades, &facade{
-		file:  file,
+		file: &File{
+			Filename:    file.Filename,
+			File:        file.File,
+			PackageInfo: p,
+		},
 		node:  node,
 		obj:   obj,
 		pkg:   p,

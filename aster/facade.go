@@ -17,14 +17,10 @@ package aster
 import (
 	"fmt"
 	"go/ast"
+	"go/token"
 	"go/types"
 	"strings"
-
-	"github.com/henrylee2cn/aster/internal/loader"
 )
-
-// File the 'ast.File' with filename
-type File = loader.File
 
 // An Facade describes a named language entity such as a package,
 // constant, type, variable, function (incl. methods), or label.
@@ -36,8 +32,14 @@ type File = loader.File
 type Facade interface {
 	facadeIdentify() // only as identify
 
-	// Filename returns the file full name where it is located.
-	Filename() string
+	// FileSet returns the *token.FileSet
+	FileSet() *token.FileSet
+
+	// FormatNode formats the node and returns the string.
+	FormatNode(ast.Node) (string, error)
+
+	// PackageInfo returns the package info.
+	PackageInfo() *PackageInfo
 
 	// File returns the file it is in.
 	File() *File
@@ -207,7 +209,8 @@ type Facade interface {
 }
 
 type facade struct {
-	file         *loader.File
+	fset         *token.FileSet
+	file         *File
 	node         ast.Node
 	obj          types.Object
 	pkg          *PackageInfo
@@ -236,8 +239,19 @@ func (fa *facade) mustGetFacadeByTyp(typ types.Type) *facade {
 	return facade
 }
 
-func (fa *facade) Filename() string {
-	return fa.File().Filename
+// FileSet returns the *token.FileSet
+func (fa *facade) FileSet() *token.FileSet {
+	return fa.fset
+}
+
+// FormatNode formats the node and returns the string.
+func (fa *facade) FormatNode(node ast.Node) (string, error) {
+	return fa.PackageInfo().FormatNode(node)
+}
+
+// PackageInfo returns the package info.
+func (fa *facade) PackageInfo() *PackageInfo {
+	return fa.pkg
 }
 
 // File returns the file it is in.

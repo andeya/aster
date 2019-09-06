@@ -21,8 +21,6 @@ import (
 	"go/parser"
 	"go/types"
 	"strings"
-
-	"github.com/henrylee2cn/aster/internal/loader"
 )
 
 // ---------------------------------- TypKind = Signature (function) ----------------------------------
@@ -78,14 +76,11 @@ func (fa *facade) Variadic() bool {
 // NOTE: Panic, if TypKind != Signature
 func (fa *facade) Body() (string, error) {
 	fa.signature()
-	_, nodes, _ := fa.pkg.pathEnclosingInterval(fa.ident.Pos(), fa.ident.End())
-	for _, node := range nodes {
-		switch decl := node.(type) {
-		case *ast.FuncDecl:
-			return fa.pkg.prog.FormatNode(decl.Body)
-		case *ast.FuncLit:
-			return fa.pkg.prog.FormatNode(decl.Body)
-		}
+	switch decl := fa.Node().(type) {
+	case *ast.FuncDecl:
+		return fa.pkg.prog.FormatNode(decl.Body)
+	case *ast.FuncLit:
+		return fa.pkg.prog.FormatNode(decl.Body)
 	}
 	return "", errors.New("not found function body")
 }
@@ -103,7 +98,7 @@ func (fa *facade) CoverBody(body string) error {
 	return errors.New("not support")
 }
 
-func (fa *facade) replaceFuncBody(file *loader.File, node *ast.BlockStmt, newContent string) error {
+func (fa *facade) replaceFuncBody(file *File, node *ast.BlockStmt, newContent string) error {
 	newContentBytes := []byte("package " + fa.pkg.Pkg.Name() + "\n" +
 		strings.SplitN(fa.String(), "{", 2)[0] + "{" +
 		strings.Replace(strings.TrimSpace(newContent), "\n", ";", -1) +

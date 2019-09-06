@@ -239,7 +239,9 @@ func (prog *Program) Load() (itself *Program, err error) {
 	prog.initiated = true
 	defer func() {
 		if p := recover(); p != nil {
-			prog.initialError = fmt.Errorf("%v", p)
+			err = fmt.Errorf("%v", p)
+			prog.initialError = err
+			fmt.Printf("panic:%v\n%s", err, goutil.PanicTrace(1))
 		}
 	}()
 	p, err := prog.conf.Load()
@@ -266,7 +268,7 @@ func (prog *Program) Load() (itself *Program, err error) {
 	// 		strings.Join(errpkgs, ", "), more)
 	// 	return prog, prog.initialError
 	// }
-	return prog.convert(p), prog.initialError
+	return prog.convert(p), nil
 }
 
 // MustLoad is the same as Load(), but panic when error occur.

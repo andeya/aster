@@ -37,30 +37,33 @@ package test
 
 func TestFilename(t *testing.T) {
 	want := "../_out/inspect1.go"
-	prog, _ := aster.LoadFile(want, src)
+	prog, err := aster.LoadFile(want, src)
+	if err != nil {
+		t.Fatal(err)
+	}
 	prog.Inspect(func(fa aster.Facade) bool {
-		if fa.Filename() != want {
-			t.Fatalf("want:%s, got:%s", want, fa.Filename())
+		if fa.File().Filename != want {
+			t.Fatalf("want:%s, got:%s", want, fa.File().Filename)
 		}
 		return true
 	})
-	want, err := filepath.Abs("../_out/struct.go")
+	want, err = filepath.Abs("../_out/struct.go")
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	prog, _ = aster.LoadDirs("../_out/")
 	prog.Inspect(func(fa aster.Facade) bool {
-		if fa.Filename() != want {
-			t.Fatalf("want:%s, got:%s", want, fa.Filename())
+		if fa.File().Filename != want {
+			t.Fatalf("want:%s, got:%s", want, fa.File().Filename)
 		}
 		return true
 	})
 
 	prog, _ = aster.LoadPkgs("../_out/")
 	prog.Inspect(func(fa aster.Facade) bool {
-		if fa.Filename() != want {
-			t.Fatalf("want:%s, got:%s", want, fa.Filename())
+		if fa.File().Filename != want {
+			t.Fatalf("want:%s, got:%s", want, fa.File().Filename)
 		}
 		return true
 	})
