@@ -114,3 +114,22 @@ var a=1
 		t.Log(codes[filename])
 	}
 }
+
+func TestMethod(t *testing.T) {
+	var src = `package test
+	import "time"
+type M struct{}
+
+func(m *M)T(t *time.Time)(r time.Time){
+	return *t
+}
+`
+	const filename = "../_out/method.go"
+	prog, _ := aster.LoadFile(filename, src)
+	fa := prog.Lookup(aster.Typ, aster.Struct, "M")[0]
+	method := fa.Method(0)
+	t.Log(method.Body())
+	t.Log("Name:", method.Name())
+	t.Log("Param:", method.Params().At(0).Name(), method.Params().At(0).Type())
+	t.Log("Return:", method.Results().At(0).Name(), method.Results().At(0).Type())
+}
