@@ -15,9 +15,11 @@
 package aster_test
 
 import (
+	"go/ast"
 	"testing"
 
 	"github.com/henrylee2cn/aster/aster"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestCoverBody1(t *testing.T) {
@@ -129,7 +131,16 @@ func(m *M)T(t *time.Time)(r time.Time){
 	fa := prog.Lookup(aster.Typ, aster.Struct, "M")[0]
 	method := fa.Method(0)
 	t.Log(method.Body())
-	t.Log("Name:", method.Name())
-	t.Log("Param:", method.Params().At(0).Name(), method.Params().At(0).Type())
-	t.Log("Return:", method.Results().At(0).Name(), method.Results().At(0).Type())
+	assert.Equal(t, "T", method.Name())
+	assert.Equal(t, "t", method.Params().At(0).Name())
+	assert.Equal(t, "*time.Time", method.Params().At(0).Type().String())
+	assert.Equal(t, "r", method.Results().At(0).Name())
+	assert.Equal(t, "time.Time", method.Results().At(0).Type().String())
+	fnType := method.Node().(*ast.FuncDecl).Type
+	reqType, err := method.FormatNode(fnType.Params.List[0].Type)
+	assert.Nil(t, err)
+	assert.Equal(t, "*time.Time", reqType)
+	respType, err := method.FormatNode(fnType.Results.List[0].Type)
+	assert.Nil(t, err)
+	assert.Equal(t, "time.Time", respType)
 }

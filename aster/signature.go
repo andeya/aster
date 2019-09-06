@@ -101,7 +101,7 @@ func (fa *facade) CoverBody(body string) error {
 func (fa *facade) replaceFuncBody(file *File, node *ast.BlockStmt, newContent string) error {
 	newContentBytes := []byte("package " + fa.pkg.Pkg.Name() + "\n" +
 		strings.SplitN(fa.String(), "{", 2)[0] + "{" +
-		strings.Replace(strings.TrimSpace(newContent), "\n", ";", -1) +
+		strings.TrimSpace(newContent) +
 		"}")
 	// TODO:
 	// Possible file name conflicts
