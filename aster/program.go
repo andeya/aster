@@ -28,6 +28,7 @@ import (
 	"strings"
 
 	"github.com/henrylee2cn/aster/internal/loader"
+	"github.com/henrylee2cn/aster/tools"
 	"github.com/henrylee2cn/goutil"
 )
 
@@ -65,6 +66,8 @@ type Program struct {
 	// belong to multiple packages and be parsed more than once.
 	// token.File captures this distinction; filename does not.
 	filesToUpdate map[*token.File]bool
+	// <filename, codes> Non file Sources
+	nonfileSources map[string][]byte
 }
 
 // LoadFile parses the source code of a single Go file and loads a new program.
@@ -158,6 +161,7 @@ func NewProgram() *Program {
 	// It would be nice if the loader API permitted "AllowErrors: soft".
 	prog.conf.AllowErrors = true
 	prog.conf.TypeChecker.DisableUnusedImportCheck = true
+	prog.nonfileSources = make(map[string][]byte)
 	return prog
 }
 
@@ -172,7 +176,8 @@ func NewProgram() *Program {
 //
 func (prog *Program) AddFile(filename string, src interface{}) (itself *Program) {
 	if !prog.initiated && prog.initialError == nil {
-		f, err := prog.conf.ParseFile(filename, src)
+		b, srcErr := tools.ReadSourceBytes(src)
+		f, err := prog.conf.ParseFile(filename, b)
 		if err != nil {
 			prog.initialError = err
 		} else {
@@ -180,6 +185,9 @@ func (prog *Program) AddFile(filename string, src interface{}) (itself *Program)
 				filename = autoFilename(f)
 			}
 			prog.conf.CreateFromFiles(f.Name.Name, &loader.File{Filename: filename, File: f})
+			if srcErr == nil {
+				prog.nonfileSources[filename] = b
+			}
 		}
 	}
 	return prog
@@ -338,14 +346,22 @@ func (prog *Program) Package(path string) *PackageInfo {
 //
 // The zero value is returned if not found.
 //
-func (prog *Program) pathEnclosingInterval(start, end token.Pos) (pkg *PackageInfo, path []ast.Node, exact bool) {
+func (prog *Program) pathEnclosingInterval(start, end token.Pos) (pkg *PackageInfo, file *loader.File, path []ast.Node, exact bool) {
 	for _, pkg = range prog.allPackages {
-		path, exact = pkg.pathEnclosingInterval(start, end)
+		file, path, exact = pkg.pathEnclosingInterval(start, end)
 		if path != nil {
 			return
 		}
 	}
-	return nil, nil, false
+	return nil, nil, nil, false
+}
+
+func (prog *Program) source(filename string) ([]byte, error) {
+	src, ok := prog.nonfileSources[filename]
+	if ok {
+		return src, nil
+	}
+	return tools.ReadSource(filename, nil)
 }
 
 func containsHardErrors(errors []error) bool {

@@ -15,8 +15,14 @@
 package aster
 
 import (
+	"errors"
 	"fmt"
+	"go/ast"
+	"go/parser"
 	"go/types"
+	"strings"
+
+	"github.com/henrylee2cn/aster/internal/loader"
 )
 
 // ---------------------------------- TypKind = Signature (function) ----------------------------------
@@ -67,3 +73,93 @@ func (fa *facade) Results() *types.Tuple {
 func (fa *facade) Variadic() bool {
 	return fa.signature().Variadic()
 }
+
+// Body returns function body.
+// NOTE: Panic, if TypKind != Signature
+func (fa *facade) Body() (string, error) {
+	fa.signature()
+	_, nodes, _ := fa.pkg.pathEnclosingInterval(fa.ident.Pos(), fa.ident.End())
+	for _, node := range nodes {
+		switch decl := node.(type) {
+		case *ast.FuncDecl:
+			return fa.pkg.prog.FormatNode(decl.Body)
+		case *ast.FuncLit:
+			return fa.pkg.prog.FormatNode(decl.Body)
+		}
+	}
+	return "", errors.New("not found function body")
+}
+
+// CoverBody covers function body.
+// NOTE: Panic, if TypKind != Signature
+func (fa *facade) CoverBody(body string) error {
+	fa.signature()
+	file, nodes, _ := fa.pkg.pathEnclosingInterval(fa.ident.Pos(), fa.ident.End())
+	for _, node := range nodes {
+		switch decl := node.(type) {
+		case *ast.FuncDecl:
+			return fa.replaceFuncBody(file, decl.Body, body)
+			// case *ast.FuncLit:
+			// 	return errors.New("not support *ast.FuncLit")
+		}
+	}
+	return errors.New("not support")
+}
+
+func (fa *facade) replaceFuncBody(file *loader.File, node *ast.BlockStmt, newContent string) error {
+	newContentBytes := []byte("package " + fa.pkg.Pkg.Name() + "\n" +
+		strings.SplitN(fa.String(), "{", 2)[0] + "{" +
+		strings.Replace(strings.TrimSpace(newContent), "\n", ";", -1) +
+		"}")
+	// TODO:
+	// Possible file name conflicts
+	// f, err := parser.ParseFile(fa.pkg.prog.fset, goutil.Md5(newContentBytes), newContentBytes, parser.ParseComments)
+	f, err := parser.ParseFile(fa.pkg.prog.fset, file.Filename, newContentBytes, parser.ParseComments)
+	if err != nil {
+		return err
+	}
+	if len(f.Decls) != 1 {
+		return errors.New("not support")
+	}
+	funcDecl, ok := f.Decls[0].(*ast.FuncDecl)
+	if !ok || funcDecl.Body == nil {
+		return errors.New("not support")
+	}
+	node.List = funcDecl.Body.List
+	return nil
+}
+
+// func (fa *facade) replaceFile(file *loader.File, node ast.Node, newContent string) error {
+// 	fileCode, err := fa.replaceCode(file, node, newContent)
+// 	if err != nil {
+// 		return nil
+// 	}
+// 	fset := token.NewFileSet()
+// 	_, err = parser.ParseFile(fset, file.Filename, fileCode, parser.ParseComments)
+// 	if err != nil {
+// 		return nil
+// 	}
+// 	return nil
+// }
+// func (fa *facade) replaceCode(file *loader.File, node ast.Node, newContent string) ([]byte, error) {
+// 	content, err := fa.pkg.prog.source(file.Filename)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// 	f := fa.pkg.prog.fset.File(node.Pos())
+// 	if f == nil {
+// 		return nil, errors.New("the node does not exist")
+// 	}
+// 	start := f.Offset(node.Pos())
+// 	end := f.Offset(node.End())
+// 	if start < 0 || (end >= 0 && start > end) {
+// 		return content, nil
+// 	}
+// 	if end < 0 || end > len(content) {
+// 		end = len(content)
+// 	}
+// 	if start > end {
+// 		start = end
+// 	}
+// 	return bytes.Replace(content, content[start:end], goutil.StringToBytes(newContent), 1), nil
+// }

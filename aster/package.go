@@ -39,12 +39,6 @@ type PackageInfo struct {
 	facades               []*facade
 }
 
-// A File node represents a Go source file.
-type File struct {
-	*ast.File
-	Filename string
-}
-
 // newPackageInfo creates a package info.
 func newPackageInfo(prog *Program, pkg *loader.PackageInfo) *PackageInfo {
 	return &PackageInfo{
@@ -69,7 +63,7 @@ func (p *PackageInfo) String() string {
 //
 // The zero value is returned if not found.
 //
-func (p *PackageInfo) pathEnclosingInterval(start, end token.Pos) (path []ast.Node, exact bool) {
+func (p *PackageInfo) pathEnclosingInterval(start, end token.Pos) (file *loader.File, path []ast.Node, exact bool) {
 	for _, f := range p.files {
 		if f.Pos() == token.NoPos {
 			// This can happen if the parser saw
@@ -81,15 +75,15 @@ func (p *PackageInfo) pathEnclosingInterval(start, end token.Pos) (path []ast.No
 			continue
 		}
 		if path, exact := astutil.PathEnclosingInterval(f.File, start, end); path != nil {
-			return path, exact
+			return f, path, exact
 		}
 	}
-	return nil, false
+	return nil, nil, false
 }
 
 // docComment returns the doc for an identifier.
 func (p *PackageInfo) docComment(id *ast.Ident) *ast.CommentGroup {
-	nodes, _ := p.pathEnclosingInterval(id.Pos(), id.End())
+	_, nodes, _ := p.pathEnclosingInterval(id.Pos(), id.End())
 	for _, node := range nodes {
 		switch decl := node.(type) {
 		case *ast.FuncDecl:
@@ -118,7 +112,7 @@ func (p *PackageInfo) docComment(id *ast.Ident) *ast.CommentGroup {
 
 // Preview previews the formated code and comment.
 func (p *PackageInfo) Preview(ident *ast.Ident) string {
-	nodes, _ := p.pathEnclosingInterval(ident.Pos(), ident.End())
+	_, nodes, _ := p.pathEnclosingInterval(ident.Pos(), ident.End())
 	for _, node := range nodes {
 		switch decl := node.(type) {
 		case *ast.FuncDecl, *ast.GenDecl, *ast.AssignStmt:

@@ -31,7 +31,7 @@ import (
 type Facade interface {
 	facadeIdentify() // only as identify
 
-	// Filename returns the file name where it is located.
+	// Filename returns the file full name where it is located.
 	Filename() string
 
 	// Ident returns the indent.
@@ -144,6 +144,14 @@ type Facade interface {
 	// Variadic reports whether the signature s is variadic.
 	// NOTE: Panic, if TypKind != Signature
 	Variadic() bool
+
+	// Body returns function body.
+	// NOTE: Panic, if TypKind != Signature
+	Body() (string, error)
+
+	// CoverBody covers function body.
+	// NOTE: Panic, if TypKind != Signature
+	CoverBody(body string) error
 
 	// ---------------------------------- TypKind = Struct ----------------------------------
 

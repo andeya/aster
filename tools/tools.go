@@ -3,6 +3,8 @@ package tools
 import (
 	"bytes"
 	"errors"
+	"go/ast"
+	"go/token"
 	"io"
 	"io/ioutil"
 	"os"
@@ -38,6 +40,18 @@ func RewriteFile(name string, fn func(content []byte) (newContent []byte, err er
 	return goutil.RewriteFile(name, fn)
 }
 
+// ReplaceFile replaces the bytes selected by [start, end] with the new content.
+func ReplaceFile(fset *token.FileSet, node ast.Node, newCode string) error {
+	f := fset.File(node.Pos())
+	if f == nil {
+		return errors.New("the node does not exist")
+	}
+	filename := f.Name()
+	start := f.Offset(node.Pos())
+	end := f.Offset(node.End())
+	return goutil.ReplaceFile(filename, start, end, newCode)
+}
+
 // Options specifies options for processing files.
 //
 // type Options struct {
@@ -57,7 +71,7 @@ type Options = imports.Options
 // so it is important that filename be accurate.
 // To process data ``as if'' it were in filename, pass the data as a non-nil src.
 func Format(filename string, src interface{}, opt *Options) ([]byte, error) {
-	b, err := readSourceBytes(src)
+	b, err := ReadSourceBytes(src)
 	if err != nil {
 		return nil, err
 	}
@@ -102,7 +116,7 @@ func PkgName(filenameOrDirectory string, src interface{}) (string, error) {
 			}
 		}
 	}
-	b, err := readSource(filenameOrDirectory, src)
+	b, err := ReadSource(filenameOrDirectory, src)
 	if err != nil {
 		return "", err
 	}
@@ -113,8 +127,8 @@ func PkgName(filenameOrDirectory string, src interface{}) (string, error) {
 	return goutil.BytesToString(bytes.TrimSpace(r[1])), nil
 }
 
-func readSource(filename string, src interface{}) ([]byte, error) {
-	b, err := readSourceBytes(src)
+func ReadSource(filename string, src interface{}) ([]byte, error) {
+	b, err := ReadSourceBytes(src)
 	if err != nil {
 		return nil, err
 	}
@@ -124,7 +138,7 @@ func readSource(filename string, src interface{}) ([]byte, error) {
 	return ioutil.ReadFile(filename)
 }
 
-func readSourceBytes(src interface{}) ([]byte, error) {
+func ReadSourceBytes(src interface{}) ([]byte, error) {
 	switch s := src.(type) {
 	case nil:
 		return nil, nil
