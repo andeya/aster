@@ -19,7 +19,12 @@ import (
 	"go/ast"
 	"go/types"
 	"strings"
+
+	"github.com/henrylee2cn/aster/internal/loader"
 )
+
+// File the 'ast.File' with filename
+type File = loader.File
 
 // An Facade describes a named language entity such as a package,
 // constant, type, variable, function (incl. methods), or label.
@@ -33,6 +38,12 @@ type Facade interface {
 
 	// Filename returns the file full name where it is located.
 	Filename() string
+
+	// File returns the file it is in.
+	File() *File
+
+	// Node returns the node.
+	Node() ast.Node
 
 	// Ident returns the indent.
 	Ident() *ast.Ident
@@ -196,6 +207,8 @@ type Facade interface {
 }
 
 type facade struct {
+	file         *loader.File
+	node         ast.Node
 	obj          types.Object
 	pkg          *PackageInfo
 	ident        *ast.Ident
@@ -224,7 +237,17 @@ func (fa *facade) mustGetFacadeByTyp(typ types.Type) *facade {
 }
 
 func (fa *facade) Filename() string {
-	return fa.pkg.prog.fset.File(fa.ident.Pos()).Name()
+	return fa.File().Filename
+}
+
+// File returns the file it is in.
+func (fa *facade) File() *File {
+	return fa.file
+}
+
+// Node returns the node.
+func (fa *facade) Node() ast.Node {
+	return fa.node
 }
 
 // Ident returns the indent.

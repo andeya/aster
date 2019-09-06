@@ -94,14 +94,11 @@ func (fa *facade) Body() (string, error) {
 // NOTE: Panic, if TypKind != Signature
 func (fa *facade) CoverBody(body string) error {
 	fa.signature()
-	file, nodes, _ := fa.pkg.pathEnclosingInterval(fa.ident.Pos(), fa.ident.End())
-	for _, node := range nodes {
-		switch decl := node.(type) {
-		case *ast.FuncDecl:
-			return fa.replaceFuncBody(file, decl.Body, body)
-			// case *ast.FuncLit:
-			// 	return errors.New("not support *ast.FuncLit")
-		}
+	switch decl := fa.Node().(type) {
+	case *ast.FuncDecl:
+		return fa.replaceFuncBody(fa.File(), decl.Body, body)
+		// case *ast.FuncLit:
+		// 	return errors.New("not support *ast.FuncLit")
 	}
 	return errors.New("not support")
 }

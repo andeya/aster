@@ -17,12 +17,17 @@ package aster
 import (
 	"go/ast"
 	"go/types"
+
+	"github.com/henrylee2cn/aster/internal/loader"
 )
 
 func (p *PackageInfo) check() {
 	// log.Printf("Checking package %s...", p.String())
 L:
 	for ident, obj := range p.info.Defs {
+		var node ast.Node
+		var file *loader.File
+		var nodes []ast.Node
 		switch GetObjKind(obj) {
 		case Bad, Lbl, Bui, Nil:
 			continue L
@@ -30,14 +35,25 @@ L:
 			if GetTypKind(obj.Type()) == Struct {
 				break
 			}
-			_, nodes, _ := p.pathEnclosingInterval(ident.Pos(), ident.End())
-			for _, n := range nodes {
+			file, nodes, _ = p.pathEnclosingInterval(ident.Pos(), ident.End())
+			for i, n := range nodes {
+				if i == 1 {
+					node = n
+				}
 				if _, ok := n.(*ast.Field); ok {
 					continue L
 				}
 			}
+		default:
+			file, nodes, _ = p.pathEnclosingInterval(ident.Pos(), ident.End())
+			for i, n := range nodes {
+				if i == 1 {
+					node = n
+					break
+				}
+			}
 		}
-		p.addFacade(ident, obj)
+		p.addFacade(file, node, ident, obj)
 	}
 }
 
@@ -141,8 +157,10 @@ func (p *PackageInfo) getFacadeByTyp(t types.Type) (facade *facade, idx int) {
 	return nil, -1
 }
 
-func (p *PackageInfo) addFacade(ident *ast.Ident, obj types.Object) {
+func (p *PackageInfo) addFacade(file *loader.File, node ast.Node, ident *ast.Ident, obj types.Object) {
 	p.facades = append(p.facades, &facade{
+		file:  file,
+		node:  node,
 		obj:   obj,
 		pkg:   p,
 		ident: ident,

@@ -137,7 +137,7 @@ func LoadPkgsWithTests(pkgPath ...string) (*Program, error) {
 func NewProgram() *Program {
 	prog := new(Program)
 	prog.filesToUpdate = make(map[*token.File]bool, 128)
-	prog.conf.ParserMode = parser.ParseComments | parser.AllErrors
+	prog.conf.ParserMode = parser.ParseComments
 	// Optimization: don't type-check the bodies of functions in our
 	// dependencies, since we only need exported package members.
 	prog.conf.TypeCheckFuncBodies = func(p string) bool {
@@ -247,23 +247,25 @@ func (prog *Program) Load() (itself *Program, err error) {
 		prog.initialError = err
 		return prog, prog.initialError
 	}
-	var errpkgs []string
-	// Report hard errors in indirectly imported packages.
-	for _, info := range p.AllPackages {
-		if containsHardErrors(info.Errors) {
-			errpkgs = append(errpkgs, info.Pkg.Path())
-		}
-	}
-	if errpkgs != nil {
-		var more string
-		if len(errpkgs) > 3 {
-			more = fmt.Sprintf(" and %d more", len(errpkgs)-3)
-			errpkgs = errpkgs[:3]
-		}
-		prog.initialError = fmt.Errorf("couldn't load packages due to errors: %s%s",
-			strings.Join(errpkgs, ", "), more)
-		return prog, prog.initialError
-	}
+	// Allow exist error
+
+	// var errpkgs []string
+	// // Report hard errors in indirectly imported packages.
+	// for _, info := range p.AllPackages {
+	// 	if containsHardErrors(info.Errors) {
+	// 		errpkgs = append(errpkgs, info.Pkg.Path())
+	// 	}
+	// }
+	// if errpkgs != nil {
+	// 	var more string
+	// 	if len(errpkgs) > 3 {
+	// 		more = fmt.Sprintf(" and %d more", len(errpkgs)-3)
+	// 		errpkgs = errpkgs[:3]
+	// 	}
+	// 	prog.initialError = fmt.Errorf("couldn't load packages due to errors: %s%s",
+	// 		strings.Join(errpkgs, ", "), more)
+	// 	return prog, prog.initialError
+	// }
 	return prog.convert(p), prog.initialError
 }
 
