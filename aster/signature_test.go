@@ -119,7 +119,7 @@ var a=1
 
 func TestMethod(t *testing.T) {
 	var src = `package test
-	import "time"
+	// import "time"
 type M struct{}
 
 func(m *M)T(t *time.Time)(r time.Time){

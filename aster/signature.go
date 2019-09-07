@@ -46,6 +46,7 @@ func (fa *facade) IsMethod() bool {
 // Params returns the parameters of signature s, or nil.
 // NOTE: Panic, if TypKind != Signature
 func (fa *facade) Params() *types.Tuple {
+	fa.checkParams()
 	return fa.signature().Params()
 }
 
@@ -63,6 +64,7 @@ func (fa *facade) Recv() *types.Var {
 // Results returns the results of signature s, or nil.
 // NOTE: Panic, if TypKind != Signature
 func (fa *facade) Results() *types.Tuple {
+	fa.checkResults()
 	return fa.signature().Results()
 }
 
