@@ -1,21 +1,22 @@
 # Aster [![Build Status](https://travis-ci.org/henrylee2cn/aster.svg?branch=master)](https://travis-ci.org/henrylee2cn/aster) <!-- [![Coverage Status](https://coveralls.io/repos/github/henrylee2cn/aster/badge.svg?branch=master)](https://coveralls.io/github/henrylee2cn/aster?branch=master) --> [![Report Card](https://goreportcard.com/badge/github.com/henrylee2cn/aster)](http://goreportcard.com/report/henrylee2cn/aster) [![GitHub release](https://img.shields.io/github/release/henrylee2cn/aster.svg)](https://github.com/henrylee2cn/aster/releases) [![GoDoc](https://img.shields.io/badge/godoc-reference-blue.svg)](http://godoc.org/github.com/henrylee2cn/aster)
 
-Golang coding efficiency engine.
+Easily get the golang syntax tree and modify the code.
 
 [中文版](./README_ZH.md)
 
 ## Feature
 
 - Convert the AST to `reflect.Type`-like types(Kind-Flags), as it would at runtime
-- Simpler, more natural way of metaprogramming
 - Collect and package common syntax node types
 - Provides easy-to-use traversal syntax node functionality
 - Easily fetch and modify syntax node information
+- Formatted output modified code
+- Simpler, more natural way of metaprogramming
 - ...
 
 ## Go Version
 
-- go1.11
+- ≥go1.11
 
 ## An Example
 

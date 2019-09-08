@@ -1,4 +1,4 @@
-// Package aster is golang coding efficiency engine.
+// Package aster can easily get the golang syntax tree and modify the code.
 //
 // Copyright 2018 henrylee2cn. All Rights Reserved.
 //

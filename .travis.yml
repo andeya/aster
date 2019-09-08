@@ -3,8 +3,8 @@ os:
   - linux
   - osx
 go:
-  # - "1.10"
-  - "1.11"
+  - "1.12"
+  - "1.13"
 go_import_path: github.com/henrylee2cn/aster
 env:
   - GIMME_ARCH=amd64 GO111MODULE=on
