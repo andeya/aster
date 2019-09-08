@@ -156,3 +156,11 @@ func ReadSourceBytes(src interface{}) ([]byte, error) {
 	}
 	return nil, errors.New("invalid source")
 }
+
+// CodeStyleType converts *a/b/c.T to *c.T
+func CodeStyleType(typeString string) string {
+	s := strings.TrimLeft(typeString, "*")
+	starNum := len(typeString) - len(s)
+	s = s[strings.LastIndex(s, "/")+1:]
+	return strings.Repeat("*", starNum) + s
+}

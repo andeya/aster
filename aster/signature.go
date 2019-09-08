@@ -108,7 +108,7 @@ func (fa *facade) replaceFuncBody(file *File, node *ast.BlockStmt, newContent st
 	// TODO:
 	// Possible file name conflicts
 	// f, err := parser.ParseFile(fa.pkg.prog.fset, goutil.Md5(newContentBytes), newContentBytes, parser.ParseComments)
-	f, err := parser.ParseFile(fa.pkg.prog.fset, file.Filename, newContentBytes, parser.ParseComments)
+	f, err := parser.ParseFile(fa.pkg.prog.fset, "patch_"+file.Filename, newContentBytes, parser.ParseComments)
 	if err != nil {
 		return err
 	}

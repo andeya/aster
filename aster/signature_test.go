@@ -19,6 +19,7 @@ import (
 	"testing"
 
 	"github.com/henrylee2cn/aster/aster"
+	"github.com/henrylee2cn/aster/tools"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -119,10 +120,10 @@ var a=1
 
 func TestMethod(t *testing.T) {
 	var src = `package test
-	// import "time"
+import "net/http/httputil"
 type M struct{}
 
-func(m *M)T(t *time.Time)(r time.Time){
+func(m *M)T(t httputil.BufferPool)(r *httputil.BufferPool){
 	return *t
 }
 `
@@ -133,14 +134,16 @@ func(m *M)T(t *time.Time)(r time.Time){
 	t.Log(method.Body())
 	assert.Equal(t, "T", method.Name())
 	assert.Equal(t, "t", method.Params().At(0).Name())
-	assert.Equal(t, "*time.Time", method.Params().At(0).Type().String())
+	assert.Equal(t, "net/http/httputil.BufferPool", method.Params().At(0).Type().String())
+	assert.Equal(t, "httputil.BufferPool", tools.CodeStyleType(method.Params().At(0).Type().String()))
 	assert.Equal(t, "r", method.Results().At(0).Name())
-	assert.Equal(t, "time.Time", method.Results().At(0).Type().String())
+	assert.Equal(t, "*net/http/httputil.BufferPool", method.Results().At(0).Type().String())
+	assert.Equal(t, "*httputil.BufferPool", tools.CodeStyleType(method.Results().At(0).Type().String()))
 	fnType := method.Node().(*ast.FuncDecl).Type
 	reqType, err := method.FormatNode(fnType.Params.List[0].Type)
 	assert.Nil(t, err)
-	assert.Equal(t, "*time.Time", reqType)
+	assert.Equal(t, "httputil.BufferPool", reqType)
 	respType, err := method.FormatNode(fnType.Results.List[0].Type)
 	assert.Nil(t, err)
-	assert.Equal(t, "time.Time", respType)
+	assert.Equal(t, "*httputil.BufferPool", respType)
 }
