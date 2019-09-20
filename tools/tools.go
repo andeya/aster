@@ -65,8 +65,13 @@ func ReplaceFile(fset *token.FileSet, node ast.Node, newCode string) error {
 type Options = imports.Options
 
 // FormatFile formats and adjusts imports for the provided file, and rewrites it.
-func FormatFile(filename string, opt *Options) error {
+// NOTE:
+//  If content is not empty, use it as new content, format it and overwriting the original file content.
+func FormatFile(filename string, content []byte, opt *Options) error {
 	return RewriteFile(filename, func(c []byte) ([]byte, error) {
+		if len(content) > 0 {
+			c = content
+		}
 		return Format(filename, c, opt)
 	})
 }
