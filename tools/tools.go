@@ -64,6 +64,13 @@ func ReplaceFile(fset *token.FileSet, node ast.Node, newCode string) error {
 // }
 type Options = imports.Options
 
+// FormatFile formats and adjusts imports for the provided file, and rewrites it.
+func FormatFile(filename string, opt *Options) error {
+	return RewriteFile(filename, func(c []byte) ([]byte, error) {
+		return Format(filename, c, opt)
+	})
+}
+
 // Format formats and adjusts imports for the provided file.
 // If opt is nil the defaults are used.
 //
