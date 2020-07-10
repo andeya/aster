@@ -48,7 +48,7 @@ type Program struct {
 	// if any, of each package in Import(), ImportWithTests(),
 	// LoadPkgs and LoadPkgsWithTests() ordered by ImportPath.
 	//
-	// NOTE: these files must not import "C".  Cgo preprocessing is
+	// NOTE: these loaderFiles must not import "C".  Cgo preprocessing is
 	// only performed on imported packages, not ad hoc packages.
 	//
 	created []*PackageInfo
@@ -80,7 +80,7 @@ func LoadFile(filename string, src interface{}) (*Program, error) {
 	return NewProgram().AddFile(filename, src).Load()
 }
 
-// LoadDirs parses the source code of Go files under the directories and loads a new program.
+// LoadDirs parses the source code of Go loaderFiles under the directories and loads a new program.
 func LoadDirs(dirs ...string) (*Program, error) {
 	p := NewProgram()
 	srcs, _ := goutil.StringsConvert(build.Default.SrcDirs(), func(s string) (string, error) {
@@ -121,12 +121,12 @@ func LoadPkgs(pkgPath ...string) (*Program, error) {
 //
 // the set of initial source packages located relative to $GOPATH.
 //
-// The package will be augmented by any *_test.go files in
+// The package will be augmented by any *_test.go loaderFiles in
 // its directory that contain a "package x" (not "package x_test")
 // declaration.
 //
-// In addition, if any *_test.go files contain a "package x_test"
-// declaration, an additional package comprising just those files will
+// In addition, if any *_test.go loaderFiles contain a "package x_test"
+// declaration, an additional package comprising just those loaderFiles will
 // be added to CreatePkgs.
 //
 func LoadPkgsWithTests(pkgPath ...string) (*Program, error) {
@@ -210,12 +210,12 @@ func (prog *Program) Import(pkgPath ...string) (itself *Program) {
 
 // ImportWithTests imports packages that will be imported from source,
 // the set of initial source packages located relative to $GOPATH.
-// The package will be augmented by any *_test.go files in
+// The package will be augmented by any *_test.go loaderFiles in
 // its directory that contain a "package x" (not "package x_test")
 // declaration.
 //
-// In addition, if any *_test.go files contain a "package x_test"
-// declaration, an additional package comprising just those files will
+// In addition, if any *_test.go loaderFiles contain a "package x_test"
+// declaration, an additional package comprising just those loaderFiles will
 // be added to CreatePkgs.
 //
 func (prog *Program) ImportWithTests(pkgPath ...string) (itself *Program) {
