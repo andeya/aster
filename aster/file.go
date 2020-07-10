@@ -1,6 +1,7 @@
 package aster
 
 import (
+	"errors"
 	"go/ast"
 	"go/token"
 	"strings"
@@ -22,15 +23,20 @@ func (f *File) CoverImport(originImportPath string, importPath string, alias ...
 		if im.Path.Value == originImportPath {
 			im.Path.Value = importPath
 			if len(alias) > 0 {
-				im.Name.Name = alias[0]
+				im.Name = &ast.Ident{Name: alias[0]}
 			}
 		}
 	}
 }
 
 // Add a new import package
-func (f *File) AddImport(importPath string, alias ...string) {
+func (f *File) AddImport(importPath string, alias ...string) error {
 	importPath = validPkgPath(importPath)
+	for _, im := range f.Imports {
+		if im.Path.Value == importPath || (len(alias) > 0 && im.Name != nil && im.Name.Name == alias[0]) {
+			return errors.New("add import package or alias is exist")
+		}
+	}
 	var newImport *ast.ImportSpec
 	if len(alias) > 0 {
 		newImport = &ast.ImportSpec{
@@ -43,10 +49,40 @@ func (f *File) AddImport(importPath string, alias ...string) {
 		}
 	}
 	f.Imports = append(f.Imports, newImport)
+	if f.Decls == nil || len(f.Decls) == 0 {
+		f.Decls = []ast.Decl{&ast.GenDecl{Tok: token.IMPORT}}
+	}
 	for i, decl := range f.Decls {
 		d, ok := decl.(*ast.GenDecl)
-		if ok {
+		if ok && d.Tok == token.IMPORT {
 			f.Decls[i].(*ast.GenDecl).Specs = append(d.Specs, newImport)
+			break
+		}
+	}
+	return nil
+}
+
+func (f *File) DelImport(path string) {
+	path = validPkgPath(path)
+	var delIm *ast.ImportSpec
+	for i, im := range f.Imports {
+		if im.Path.Value == path {
+			delIm = im
+			f.Imports = append(f.Imports[0:i], f.Imports[i+1:]...)
+			break
+		}
+	}
+	if delIm == nil {
+		return
+	}
+	for _, decl := range f.Decls {
+		d, ok := decl.(*ast.GenDecl)
+		if ok && d.Tok == token.IMPORT {
+			for i, s := range d.Specs {
+				if s == delIm {
+					f.Decls[i].(*ast.GenDecl).Specs = append(d.Specs[0:i], d.Specs[i+1:]...)
+				}
+			}
 			break
 		}
 	}
