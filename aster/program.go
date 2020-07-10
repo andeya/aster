@@ -176,8 +176,12 @@ func NewProgram() *Program {
 //
 func (prog *Program) AddFile(filename string, src interface{}) (itself *Program) {
 	if !prog.initiated && prog.initialError == nil {
+		var _src interface{}
 		b, srcErr := tools.ReadSourceBytes(src)
-		f, err := prog.conf.ParseFile(filename, b)
+		if b != nil {
+			_src = b
+		}
+		f, err := prog.conf.ParseFile(filename, _src)
 		if err != nil {
 			prog.initialError = err
 		} else {
