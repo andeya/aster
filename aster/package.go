@@ -33,23 +33,36 @@ type PackageInfo struct {
 	Pkg                   *types.Package
 	importable            bool           // true if 'import "Pkg.Path()"' would resolve to this
 	transitivelyErrorFree bool           // true if Pkg and all its dependencies are free of errors
-	files                 []*loader.File // syntax trees for the package's files
+	loaderFiles           []*loader.File // syntax trees for the package's loaderFiles
 	Errors                []error        // non-nil if the package had errors
 	info                  types.Info     // type-checker deductions.
-	facades               []*facade
+	Files                 []*File
 }
 
 // newPackageInfo creates a package info.
 func newPackageInfo(prog *Program, pkg *loader.PackageInfo) *PackageInfo {
-	return &PackageInfo{
+	pkgInfo := &PackageInfo{
 		Pkg:                   pkg.Pkg,
 		importable:            pkg.Importable,
 		transitivelyErrorFree: pkg.TransitivelyErrorFree,
-		files:                 pkg.Files,
+		loaderFiles:           pkg.Files,
 		Errors:                pkg.Errors,
 		info:                  pkg.Info,
 		prog:                  prog,
 	}
+	files := make([]*File, 0)
+	if pkg.Files != nil {
+		for _, f := range pkg.Files {
+			files = append(files, &File{
+				Filename:    f.Filename,
+				File:        f.File,
+				PackageInfo: pkgInfo,
+				facade:      make([]*facade, 0),
+			})
+		}
+	}
+	pkgInfo.Files = files
+	return pkgInfo
 }
 
 // Program returns the program.
@@ -64,13 +77,13 @@ func (p *PackageInfo) String() string {
 
 // pathEnclosingInterval returns the PackageInfo and ast.Node that
 // contain source interval [start, end), and all the node's ancestors
-// up to the AST root.  It searches all ast.files in the package.
+// up to the AST root.  It searches all ast.loaderFiles in the package.
 // exact is defined as for astutil.PathEnclosingInterval.
 //
 // The zero value is returned if not found.
 //
 func (p *PackageInfo) pathEnclosingInterval(start, end token.Pos) (file *loader.File, path []ast.Node, exact bool) {
-	for _, f := range p.files {
+	for _, f := range p.loaderFiles {
 		if f.Pos() == token.NoPos {
 			// This can happen if the parser saw
 			// too many errors and bailed out.

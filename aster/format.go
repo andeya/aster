@@ -49,11 +49,11 @@ func (prog *Program) Format() (codes map[string]string, first error) {
 // Format formats the package and returns the string.
 // @codes <fileName,code>
 func (p *PackageInfo) Format() (codes map[string]string, first error) {
-	codes = make(map[string]string, len(p.files))
+	codes = make(map[string]string, len(p.loaderFiles))
 	var code string
 	var codeBytes []byte
 	pkgName := p.Pkg.Name()
-	for _, f := range p.files {
+	for _, f := range p.loaderFiles {
 		code, first = p.FormatNode(f.File)
 		if first != nil {
 			return
@@ -66,6 +66,13 @@ func (p *PackageInfo) Format() (codes map[string]string, first error) {
 		codes[f.Filename] = goutil.BytesToString(codeBytes)
 	}
 	return
+}
+
+func (f *File) Format() (codes map[string]string, first error) {
+	codes = make(map[string]string, 1)
+	code, first := f.PackageInfo.FormatNode(f.File)
+	codes[f.Filename] = code
+	return codes, first
 }
 
 // FormatNode formats the node and returns the string.
@@ -92,7 +99,7 @@ func formatNode(fset *token.FileSet, node ast.Node) (string, error) {
 	return goutil.BytesToString(dst.Bytes()), nil
 }
 
-// Rewrite formats the created and imported packages codes and writes to local files.
+// Rewrite formats the created and imported packages codes and writes to local loaderFiles.
 func (prog *Program) Rewrite() (first error) {
 	for _, pkg := range prog.InitialPackages() {
 		first = pkg.Rewrite()
@@ -103,9 +110,23 @@ func (prog *Program) Rewrite() (first error) {
 	return
 }
 
-// Rewrite formats the package codes and writes to local files.
+// Rewrite formats the package codes and writes to local loaderFiles.
 func (p *PackageInfo) Rewrite() (first error) {
 	codes, first := p.Format()
+	if first != nil {
+		return
+	}
+	for k, v := range codes {
+		first = writeFile(k, v)
+		if first != nil {
+			return first
+		}
+	}
+	return
+}
+
+func (f *File) Rewrite() (first error) {
+	codes, first := f.Format()
 	if first != nil {
 		return
 	}
