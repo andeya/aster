@@ -15,7 +15,7 @@ type File struct {
 	facade []*facade
 }
 
-// Overwrite originImportPath with importPath
+// CoverImport cover originImportPath with importPath
 func (f *File) CoverImport(originImportPath string, importPath string, alias ...string) {
 	originImportPath = validPkgPath(originImportPath)
 	importPath = validPkgPath(importPath)
@@ -29,7 +29,7 @@ func (f *File) CoverImport(originImportPath string, importPath string, alias ...
 	}
 }
 
-// Add a new import package
+// AddImport add a new import package
 func (f *File) AddImport(importPath string, alias ...string) error {
 	importPath = validPkgPath(importPath)
 	for _, im := range f.Imports {
@@ -62,6 +62,7 @@ func (f *File) AddImport(importPath string, alias ...string) error {
 	return nil
 }
 
+// DelImport delete a import path
 func (f *File) DelImport(path string) {
 	path = validPkgPath(path)
 	var delIm *ast.ImportSpec
