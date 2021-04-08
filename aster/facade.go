@@ -71,7 +71,7 @@ type Facade interface {
 	// Doc returns lead comment.
 	Doc() string
 
-	// CoverDoc covers lead comment if it exists.
+	// SetDoc sets lead comment.
 	SetDoc(text string) bool
 
 	// Exported reports whether the object is exported (starts with a capital letter).
