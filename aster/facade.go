@@ -19,6 +19,7 @@ import (
 	"go/ast"
 	"go/token"
 	"go/types"
+	"sort"
 	"strings"
 )
 
@@ -71,7 +72,7 @@ type Facade interface {
 	Doc() string
 
 	// CoverDoc covers lead comment if it exists.
-	CoverDoc(text string) bool
+	SetDoc(text string) bool
 
 	// Exported reports whether the object is exported (starts with a capital letter).
 	// It doesn't take into account whether the object is in a local (function) scope
@@ -314,17 +315,97 @@ func (fa *facade) Doc() string {
 	return fa.doc.Text()
 }
 
-// CoverDoc covers lead comment if it exists.
-func (fa *facade) CoverDoc(text string) bool {
-	if fa.doc == nil {
-		return false
+// SetDoc sets lead comment.
+func (fa *facade) SetDoc(text string) bool {
+	if fa.doc == nil || len(fa.doc.List) == 0 {
+		doc := newCommentGroup()
+		common := doc.List[0]
+		var found bool
+		_, nodes, _ := fa.file.pathEnclosingInterval(fa.ident.Pos(), fa.ident.End())
+	L:
+		for _, node := range nodes {
+			switch decl := node.(type) {
+			case *ast.FuncDecl:
+				common.Slash = decl.Pos() - 1
+				decl.Doc = doc
+				found = true
+				break L
+			case *ast.Field:
+				// common.Slash = decl.Pos() - 1
+				// decl.Doc = doc
+				// found = true
+				break L
+			case *ast.GenDecl:
+				if found {
+					if decl.Lparen == 0 {
+						n := 0
+						switch decl.Tok {
+						case token.IMPORT:
+							n = len("IMPORT")
+						case token.CONST:
+							n = len("CONST")
+						case token.TYPE:
+							n = len("TYPE")
+						case token.VAR:
+							n = len("VAR")
+						}
+						common.Slash -= token.Pos(n + 1)
+					}
+				} else {
+					common.Slash = decl.Pos() - 1
+					decl.Doc = doc
+					found = true
+				}
+				break L
+			case *ast.TypeSpec:
+				common.Slash = decl.Pos() - 1
+				decl.Doc = doc
+				found = true
+				continue L
+			case *ast.ValueSpec:
+				common.Slash = decl.Pos() - 1
+				decl.Doc = doc
+				found = true
+				continue L
+			case *ast.Ident:
+				continue L
+			default:
+				break L
+			}
+		}
+		if !found {
+			return false
+		}
+		fa.doc = doc
+		fa.file.addComment(doc)
 	}
+
 	fa.doc.List = fa.doc.List[len(fa.doc.List)-1:]
 	doc := fa.doc.List[0]
-	doc.Text = text
-	text = "// " + strings.Replace(fa.doc.Text(), "\n", "\n// ", -1)
-	doc.Text = text[:len(text)-3]
+	doc.Text = cleanDoc(text)
 	return true
+}
+
+func (f *File) addComment(doc *ast.CommentGroup) {
+	f.Comments = append(f.Comments, doc)
+	sort.Sort(Comments(f.Comments))
+}
+
+func newCommentGroup() *ast.CommentGroup {
+	common := new(ast.Comment)
+	common.Text = "//"
+	return &ast.CommentGroup{List: []*ast.Comment{common}}
+}
+
+func cleanDoc(text string) string {
+	text = strings.TrimSpace(text)
+	text = strings.Trim(text, "//")
+	text = strings.TrimLeft(text, "/**")
+	text = strings.TrimRight(text, "**/")
+	text = strings.TrimLeft(text, "/*")
+	text = strings.TrimRight(text, "*/")
+	text = "// " + strings.Replace(text, "\n", "\n// ", -1)
+	return text
 }
 
 // Exported reports whether the object is exported (starts with a capital letter).

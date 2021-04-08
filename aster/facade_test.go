@@ -18,21 +18,26 @@ package test
 	// String comment2
 	func(s S)String()string {return ""}
 	func F1(i int){a:=func(){}}
-	// F2 FuncLit!
 	var F2=func()int{
 		type G1 string
 		var v = struct{}{}
 		_=v
 		return 0
 	}
-	// H1 comment
 	var H1 = struct{}{}
-	// H2 comment
-	type H2 = struct{}
+	const X = 0
+	type H2 = struct{X string}
 	const (
 		S1 S = iota
 		S2
 	)
+	type H3 string
+	type (
+		H4 struct {Y string}
+	)
+	type H5 struct {
+		Z string
+	}
 `
 
 func TestFilename(t *testing.T) {
@@ -87,11 +92,17 @@ func TestInspect(t *testing.T) {
 func TestComment(t *testing.T) {
 	prog, _ := aster.LoadFile("../_out/inspect1.go", src)
 	prog.Inspect(func(fa aster.Facade) bool {
-		succ := fa.CoverDoc("aster: " + fa.Doc())
+		succ := fa.SetDoc("aster: " + fa.Doc())
 		if succ {
 			t.Logf("Add doc comment prefix success: %s", fa.Id())
 		} else {
 			t.Logf("Add doc comment prefix fail: %s", fa.Id())
+		}
+		if fa.TypKind() == aster.Struct {
+			for i := fa.NumFields() - 1; i >= 0; i-- {
+				fa.Field(i).SetDoc("aster-field-doc...")
+				fa.Field(i).SetComment("aster-field-comment...")
+			}
 		}
 		return true
 	})

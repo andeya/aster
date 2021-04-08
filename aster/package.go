@@ -114,19 +114,31 @@ func (p *PackageInfo) docComment(id *ast.Ident) *ast.CommentGroup {
 		// For {Type,Value}Spec, if the doc on the spec is absent,
 		// search for the enclosing GenDecl
 		case *ast.TypeSpec:
-			if decl.Doc != nil {
-				return decl.Doc
-			}
+			// if decl.Doc != nil {
+			return decl.Doc
+			// }
 		case *ast.ValueSpec:
-			if decl.Doc != nil {
-				return decl.Doc
-			}
+			// if decl.Doc != nil {
+			return decl.Doc
+			// }
 		case *ast.Ident:
 		default:
 			return nil
 		}
 	}
 	return nil
+}
+
+type Comments []*ast.CommentGroup
+
+func (c Comments) Len() int {
+	return len(c)
+}
+func (c Comments) Less(i, j int) bool {
+	return c[i].Pos() < c[j].Pos()
+}
+func (c Comments) Swap(i, j int) {
+	c[i], c[j] = c[j], c[i]
 }
 
 // Preview previews the formated code and comment.

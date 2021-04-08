@@ -204,6 +204,12 @@ func (p *PackageInfo) removeFacade(ident *ast.Ident) {
 		for _, fa := range file.facade {
 			if fa.ident == ident {
 				find = true
+				for i, comment := range file.Comments {
+					if fa.doc == comment {
+						file.Comments = append(file.Comments[:i], file.Comments[i+1:]...)
+						break
+					}
+				}
 				continue
 			}
 			newFacades = append(newFacades, fa)

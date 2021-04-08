@@ -41,11 +41,15 @@ func (fa *facade) structure() *types.Struct {
 			if tv.Type == t {
 				n, ok := expr.(*ast.StructType)
 				if !ok {
-					n = expr.(*ast.CompositeLit).Type.(*ast.StructType)
+					if a, ok := expr.(*ast.CompositeLit); ok {
+						if n, ok = a.Type.(*ast.StructType); !ok {
+							break
+						}
+					}
 				}
 				expandFields(n.Fields)
 				for i := 0; i < numFields; i++ {
-					fa.structFields[i] = fa.pkg.newStructField(n.Fields.List[i], t.Field(i))
+					fa.structFields[i] = fa.newStructField(n.Fields.List[i], t.Field(i))
 				}
 				break
 			}
@@ -87,16 +91,18 @@ func (fa *facade) FieldByName(name string) (field *StructField, found bool) {
 
 // StructField struct field object.
 type StructField struct {
-	node *ast.Field
-	obj  *types.Var
-	tags *Tags
+	node   *ast.Field
+	obj    *types.Var
+	tags   *Tags
+	facade *facade
 }
 
-func (p *PackageInfo) newStructField(node *ast.Field, obj *types.Var) *StructField {
+func (fa *facade) newStructField(node *ast.Field, obj *types.Var) *StructField {
 	sf := &StructField{
-		node: node,
-		obj:  obj,
-		tags: newTags(node),
+		node:   node,
+		obj:    obj,
+		tags:   newTags(node),
+		facade: fa,
 	}
 	return sf
 }
@@ -143,6 +149,28 @@ func (sf *StructField) Comment() string {
 		return ""
 	}
 	return sf.node.Comment.Text()
+}
+
+// SetDoc sets lead comment.
+func (sf *StructField) SetDoc(text string) {
+	if sf.node.Doc == nil || len(sf.node.Doc.List) == 0 {
+		sf.node.Doc = newCommentGroup()
+		sf.node.Doc.List[0].Slash = sf.node.Pos() - 1
+	}
+	doc := sf.node.Doc.List[0]
+	doc.Text = cleanDoc(text)
+	sf.facade.file.addComment(sf.node.Doc)
+}
+
+// SetComment sets line comment.
+func (sf *StructField) SetComment(text string) {
+	if sf.node.Comment == nil || len(sf.node.Comment.List) == 0 {
+		sf.node.Comment = newCommentGroup()
+		sf.node.Comment.List[0].Slash = sf.node.Pos() + 1
+	}
+	doc := sf.node.Comment.List[0]
+	doc.Text = cleanDoc(text)
+	sf.facade.file.addComment(sf.node.Comment)
 }
 
 // A Tags is the tag string in a struct field.
