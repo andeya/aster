@@ -156,10 +156,10 @@ func (sf *StructField) SetDoc(text string) {
 	if sf.node.Doc == nil || len(sf.node.Doc.List) == 0 {
 		sf.node.Doc = newCommentGroup()
 		sf.node.Doc.List[0].Slash = sf.node.Pos() - 1
+		sf.facade.file.appendComment(sf.node.Doc)
 	}
 	doc := sf.node.Doc.List[0]
 	doc.Text = cleanDoc(text)
-	sf.facade.file.addComment(sf.node.Doc)
 }
 
 // SetComment sets line comment.
@@ -167,10 +167,10 @@ func (sf *StructField) SetComment(text string) {
 	if sf.node.Comment == nil || len(sf.node.Comment.List) == 0 {
 		sf.node.Comment = newCommentGroup()
 		sf.node.Comment.List[0].Slash = sf.node.Pos() + 1
+		sf.facade.file.appendComment(sf.node.Comment)
 	}
 	doc := sf.node.Comment.List[0]
 	doc.Text = cleanDoc(text)
-	sf.facade.file.addComment(sf.node.Comment)
 }
 
 // A Tags is the tag string in a struct field.

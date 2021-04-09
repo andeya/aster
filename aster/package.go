@@ -129,18 +129,6 @@ func (p *PackageInfo) docComment(id *ast.Ident) *ast.CommentGroup {
 	return nil
 }
 
-type Comments []*ast.CommentGroup
-
-func (c Comments) Len() int {
-	return len(c)
-}
-func (c Comments) Less(i, j int) bool {
-	return c[i].Pos() < c[j].Pos()
-}
-func (c Comments) Swap(i, j int) {
-	c[i], c[j] = c[j], c[i]
-}
-
 // Preview previews the formated code and comment.
 func (p *PackageInfo) Preview(ident *ast.Ident) string {
 	_, nodes, _ := p.pathEnclosingInterval(ident.Pos(), ident.End())

@@ -377,7 +377,7 @@ func (fa *facade) SetDoc(text string) bool {
 			return false
 		}
 		fa.doc = doc
-		fa.file.addComment(doc)
+		fa.file.appendComment(doc)
 	}
 
 	fa.doc.List = fa.doc.List[len(fa.doc.List)-1:]
@@ -386,9 +386,21 @@ func (fa *facade) SetDoc(text string) bool {
 	return true
 }
 
-func (f *File) addComment(doc *ast.CommentGroup) {
+func (f *File) appendComment(doc *ast.CommentGroup) {
 	f.Comments = append(f.Comments, doc)
-	sort.Sort(Comments(f.Comments))
+	sort.Sort(fileComments(f.Comments))
+}
+
+type fileComments []*ast.CommentGroup
+
+func (c fileComments) Len() int {
+	return len(c)
+}
+func (c fileComments) Less(i, j int) bool {
+	return c[i].Pos() < c[j].Pos()
+}
+func (c fileComments) Swap(i, j int) {
+	c[i], c[j] = c[j], c[i]
 }
 
 func newCommentGroup() *ast.CommentGroup {
