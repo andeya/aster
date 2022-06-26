@@ -1,3 +1,4 @@
+// Deprecated: Use the "github.com/andeya/aster" module instead.
 module github.com/henrylee2cn/aster
 
 go 1.12
