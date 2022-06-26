@@ -1,4 +1,4 @@
-# Aster [![Build Status](https://travis-ci.org/henrylee2cn/aster.svg?branch=master)](https://travis-ci.org/henrylee2cn/aster) <!-- [![Coverage Status](https://coveralls.io/repos/github/henrylee2cn/aster/badge.svg?branch=master)](https://coveralls.io/github/henrylee2cn/aster?branch=master) --> [![Report Card](https://goreportcard.com/badge/github.com/henrylee2cn/aster)](http://goreportcard.com/report/henrylee2cn/aster) [![GitHub release](https://img.shields.io/github/release/henrylee2cn/aster.svg)](https://github.com/henrylee2cn/aster/releases) [![GoDoc](https://img.shields.io/badge/godoc-reference-blue.svg)](http://godoc.org/github.com/henrylee2cn/aster)
+# Aster [![Build Status](https://travis-ci.org/andeya/aster.svg?branch=master)](https://travis-ci.org/andeya/aster) <!-- [![Coverage Status](https://coveralls.io/repos/github/andeya/aster/badge.svg?branch=master)](https://coveralls.io/github/andeya/aster?branch=master) --> [![Report Card](https://goreportcard.com/badge/github.com/andeya/aster)](http://goreportcard.com/report/andeya/aster) [![GitHub release](https://img.shields.io/github/release/andeya/aster.svg)](https://github.com/andeya/aster/releases) [![GoDoc](https://img.shields.io/badge/godoc-reference-blue.svg)](http://godoc.org/github.com/andeya/aster)
 
 轻松获取 golang 语法树并修改代码。
 
@@ -27,8 +27,8 @@ import (
 	"flag"
 	"fmt"
 
-	"github.com/henrylee2cn/aster/aster"
-	"github.com/henrylee2cn/goutil"
+	"github.com/andeya/aster/aster"
+	"github.com/andeya/goutil"
 )
 
 var (

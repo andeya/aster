@@ -15,8 +15,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/henrylee2cn/aster/internal/gopathwalk"
-	"github.com/henrylee2cn/aster/internal/module"
+	"github.com/andeya/aster/internal/gopathwalk"
+	"github.com/andeya/aster/internal/module"
 )
 
 // moduleResolver implements resolver for modules using the go command as little

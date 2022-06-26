@@ -1,4 +1,4 @@
-// Copyright 2018 henrylee2cn. All Rights Reserved.
+// Copyright 2022 AndeyaLee. All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -25,8 +25,8 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/henrylee2cn/aster/tools"
-	"github.com/henrylee2cn/goutil"
+	"github.com/andeya/aster/tools"
+	"github.com/andeya/goutil"
 )
 
 // Format formats the created and imported packages, and returns the string.

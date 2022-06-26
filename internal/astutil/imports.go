@@ -192,7 +192,7 @@ func AddNamedImport(fset *token.FileSet, f *ast.File, name, path string) (added 
 
 func isThirdParty(importPath string) bool {
 	// Third party package import path usually contains "." (".com", ".org", ...)
-	// This logic is taken from github.com/henrylee2cn/aster/internal/imports package.
+	// This logic is taken from github.com/andeya/aster/internal/imports package.
 	return strings.Contains(importPath, ".")
 }
 

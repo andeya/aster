@@ -17,7 +17,7 @@ import (
 	"sync/atomic"
 	"unicode"
 
-	"github.com/henrylee2cn/aster/internal/astutil"
+	"github.com/andeya/aster/internal/astutil"
 )
 
 func cloneIdent(i *ast.Ident) *ast.Ident {
@@ -112,7 +112,7 @@ func isDigit(ch rune) bool {
 	return '0' <= ch && ch <= '9' || ch >= 0x80 && unicode.IsDigit(ch)
 }
 
-// -- Plundered from github.com/henrylee2cn/aster/internal/cmd/guru -----------------
+// -- Plundered from github.com/andeya/aster/internal/cmd/guru -----------------
 
 // sameFile returns true if x and y have the same basename and denote
 // the same file.

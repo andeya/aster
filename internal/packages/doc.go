@@ -78,7 +78,7 @@ Motivation and design considerations
 
 The new package's design solves problems addressed by two existing
 packages: go/build, which locates and describes packages, and
-github.com/henrylee2cn/aster/internal/loader, which loads, parses and type-checks them.
+github.com/andeya/aster/internal/loader, which loads, parses and type-checks them.
 The go/build.Package structure encodes too much of the 'go build' way
 of organizing projects, leaving us in need of a data type that describes a
 package of Go source code independent of the underlying build system.

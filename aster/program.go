@@ -1,6 +1,6 @@
 // Package aster can easily get the golang syntax tree and modify the code.
 //
-// Copyright 2018 henrylee2cn. All Rights Reserved.
+// Copyright 2022 AndeyaLee. All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -27,9 +27,9 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/henrylee2cn/aster/internal/loader"
-	"github.com/henrylee2cn/aster/tools"
-	"github.com/henrylee2cn/goutil"
+	"github.com/andeya/aster/internal/loader"
+	"github.com/andeya/aster/tools"
+	"github.com/andeya/goutil"
 )
 
 // A Program is a Go program loaded from source.

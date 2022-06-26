@@ -29,7 +29,7 @@ import (
 	"io"
 	"io/ioutil"
 
-	"github.com/henrylee2cn/aster/internal/gcimporter"
+	"github.com/andeya/aster/internal/gcimporter"
 )
 
 // Find returns the name of an object (.o) or archive (.a) file

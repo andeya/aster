@@ -1,4 +1,4 @@
-// Copyright 2018 henrylee2cn. All Rights Reserved.
+// Copyright 2022 AndeyaLee. All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -19,8 +19,8 @@ import (
 	"go/token"
 	"go/types"
 
-	"github.com/henrylee2cn/aster/internal/astutil"
-	"github.com/henrylee2cn/aster/internal/loader"
+	"github.com/andeya/aster/internal/astutil"
+	"github.com/andeya/aster/internal/loader"
 )
 
 // PackageInfo holds the ASTs and facts derived by the type-checker

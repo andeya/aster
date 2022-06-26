@@ -2,8 +2,9 @@ package aster_test
 
 import (
 	"fmt"
-	"github.com/henrylee2cn/aster/aster"
 	"testing"
+
+	"github.com/andeya/aster/aster"
 )
 
 func TestFile_CoverImport(t *testing.T) {

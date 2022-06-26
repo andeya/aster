@@ -7,7 +7,7 @@ import (
 	"strings"
 	"unsafe"
 
-	"github.com/henrylee2cn/goutil/tpack"
+	"github.com/andeya/goutil/tpack"
 )
 
 type invalidType struct {

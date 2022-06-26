@@ -12,8 +12,8 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/henrylee2cn/aster/internal/imports"
-	"github.com/henrylee2cn/goutil"
+	"github.com/andeya/aster/internal/imports"
+	"github.com/andeya/goutil"
 )
 
 // MkdirAll creates a directory named path,

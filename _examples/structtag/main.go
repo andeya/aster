@@ -4,8 +4,8 @@ import (
 	"flag"
 	"fmt"
 
-	"github.com/henrylee2cn/aster/aster"
-	"github.com/henrylee2cn/goutil"
+	"github.com/andeya/aster/aster"
+	"github.com/andeya/goutil"
 )
 
 var (

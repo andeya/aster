@@ -21,8 +21,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/henrylee2cn/aster/internal/astutil"
-	"github.com/henrylee2cn/aster/internal/cgo"
+	"github.com/andeya/aster/internal/astutil"
+	"github.com/andeya/aster/internal/cgo"
 )
 
 var ignoreVendor build.ImportMode

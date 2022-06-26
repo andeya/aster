@@ -6,7 +6,7 @@
 
 // Package imports implements a Go pretty-printer (like package "go/format")
 // that also adds or removes import statements as necessary.
-package imports // import "github.com/henrylee2cn/aster/internal/imports"
+package imports // import "github.com/andeya/aster/internal/imports"
 
 import (
 	"bufio"
@@ -24,7 +24,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/henrylee2cn/aster/internal/astutil"
+	"github.com/andeya/aster/internal/astutil"
 )
 
 // Options specifies options for processing files.

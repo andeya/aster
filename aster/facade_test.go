@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/henrylee2cn/aster/aster"
+	"github.com/andeya/aster/aster"
 )
 
 var src = `// Package test for aster

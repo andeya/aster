@@ -1,6 +1,6 @@
 // Package aster can easily get the golang syntax tree and modify the code.
 //
-// Copyright 2018 henrylee2cn. All Rights Reserved.
+// Copyright 2022 AndeyaLee. All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.

@@ -1,10 +1,9 @@
-// Deprecated: Use the "github.com/andeya/aster" module instead.
-module github.com/henrylee2cn/aster
+module github.com/andeya/aster
 
 go 1.12
 
 require (
-	github.com/henrylee2cn/goutil v0.0.0-20190905105130-36491ec82b74
-	github.com/henrylee2cn/structtag v1.1.0
-	github.com/stretchr/testify v1.3.0
+	github.com/andeya/goutil v0.0.0-20220626152529-9b7868da7b6d
+	github.com/andeya/structtag v1.2.0
+	github.com/stretchr/testify v1.7.5
 )
