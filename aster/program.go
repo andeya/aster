@@ -163,8 +163,9 @@ func NewProgram() *Program {
 }
 
 // ErrorHandlerOfTypeChecker sets the error handler of type checker.
-func (prog *Program) ErrorHandlerOfTypeChecker(errHandle func(error)) {
+func (prog *Program) ErrorHandlerOfTypeChecker(errHandle func(error)) (itself *Program) {
 	prog.conf.TypeChecker.Error = errHandle
+	return prog
 }
 
 // AddFile parses the source code of a single Go source file.
