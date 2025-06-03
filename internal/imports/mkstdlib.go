@@ -1,3 +1,4 @@
+//go:build ignore
 // +build ignore
 
 // mkstdlib generates the zstdlib.go file, containing the Go standard

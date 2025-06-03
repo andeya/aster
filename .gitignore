@@ -14,5 +14,4 @@ _out
 *.zip
 
 .DS_Store
-go.sum
 .idea

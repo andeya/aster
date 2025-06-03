@@ -6,7 +6,7 @@
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-//      http://www.apache.org/licenses/LICENSE-2.0
+//	http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -75,7 +75,6 @@ type Program struct {
 // src specifies the parser input as a string, []byte, or io.Reader, and
 // filename is its apparent name.  If src is nil, the contents of
 // filename are read from the file system.
-//
 func LoadFile(filename string, src interface{}) (*Program, error) {
 	return NewProgram().AddFile(filename, src).Load()
 }
@@ -112,7 +111,6 @@ func LoadDirs(dirs ...string) (*Program, error) {
 // LoadPkgs imports packages and loads a new program.
 //
 // the set of initial source packages located relative to $GOPATH.
-//
 func LoadPkgs(pkgPath ...string) (*Program, error) {
 	return NewProgram().Import(pkgPath...).Load()
 }
@@ -128,7 +126,6 @@ func LoadPkgs(pkgPath ...string) (*Program, error) {
 // In addition, if any *_test.go loaderFiles contain a "package x_test"
 // declaration, an additional package comprising just those loaderFiles will
 // be added to CreatePkgs.
-//
 func LoadPkgsWithTests(pkgPath ...string) (*Program, error) {
 	return NewProgram().ImportWithTests(pkgPath...).Load()
 }
@@ -165,6 +162,11 @@ func NewProgram() *Program {
 	return prog
 }
 
+// ErrorHandlerOfTypeChecker sets the error handler of type checker.
+func (prog *Program) ErrorHandlerOfTypeChecker(errHandle func(error)) {
+	prog.conf.TypeChecker.Error = errHandle
+}
+
 // AddFile parses the source code of a single Go source file.
 //
 // src specifies the parser input as a string, []byte, or io.Reader, and
@@ -173,7 +175,6 @@ func NewProgram() *Program {
 //
 // filename is used to rewrite to local file;
 // if empty, rewrite to self-increasing number filename under the package name path.
-//
 func (prog *Program) AddFile(filename string, src interface{}) (itself *Program) {
 	if !prog.initiated && prog.initialError == nil {
 		var _src interface{}
@@ -217,7 +218,6 @@ func (prog *Program) Import(pkgPath ...string) (itself *Program) {
 // In addition, if any *_test.go loaderFiles contain a "package x_test"
 // declaration, an additional package comprising just those loaderFiles will
 // be added to CreatePkgs.
-//
 func (prog *Program) ImportWithTests(pkgPath ...string) (itself *Program) {
 	if !prog.initiated && prog.initialError == nil {
 		for _, p := range pkgPath {
@@ -232,7 +232,6 @@ func (prog *Program) ImportWithTests(pkgPath ...string) (itself *Program) {
 //
 // On failure, returns an error.
 // It is an error if no packages were loaded.
-//
 func (prog *Program) Load() (itself *Program, err error) {
 	if prog.initiated {
 		return prog, errors.New("can not load two times")
@@ -353,7 +352,6 @@ func (prog *Program) Package(path string) *PackageInfo {
 // exact is defined as for astutil.PathEnclosingInterval.
 //
 // The zero value is returned if not found.
-//
 func (prog *Program) pathEnclosingInterval(start, end token.Pos) (pkg *PackageInfo, file *loader.File, path []ast.Node, exact bool) {
 	for _, pkg = range prog.allPackages {
 		file, path, exact = pkg.pathEnclosingInterval(start, end)

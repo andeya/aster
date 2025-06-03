@@ -6,6 +6,7 @@
 // This file was derived from $GOROOT/src/cmd/compile/internal/gc/iexport.go;
 // see that file for specification of the format.
 
+//go:build go1.11
 // +build go1.11
 
 package gcimporter

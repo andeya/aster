@@ -28,8 +28,8 @@ import (
 // Facade interface implement all the objects.
 //
 // NOTE:
-//  Objects of ObjKind=Bad are not collected;
 //
+//	Objects of ObjKind=Bad are not collected;
 type Facade interface {
 	facadeIdentify() // only as identify
 

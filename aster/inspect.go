@@ -81,7 +81,6 @@ func (prog *Program) Inspect(fn func(Facade) bool) {
 // Match any name if name="";
 // Match any ObjKind if objKindSet=0 or objKindSet=AnyObjKind;
 // Match any TypKind if typKindSet=0 or typKindSet=AnyTypKind;
-//
 func (prog *Program) Lookup(objKindSet ObjKind, typKindSet TypKind, name string) (list []Facade) {
 	prog.Inspect(func(fa Facade) bool {
 		if (name == "" || fa.Name() == name) &&
@@ -121,7 +120,6 @@ func (p *PackageInfo) Inspect(fn func(Facade) bool) {
 // Match any name if name="";
 // Match any ObjKind if objKindSet=0 or objKindSet=AnyObjKind;
 // Match any TypKind if typKindSet=0 or typKindSet=AnyTypKind;
-//
 func (p *PackageInfo) Lookup(objKindSet ObjKind, typKindSet TypKind, name string) (list []Facade) {
 	p.Inspect(func(fa Facade) bool {
 		if (name == "" || fa.Name() == name) &&

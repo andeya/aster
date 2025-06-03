@@ -20,9 +20,9 @@ import (
 // additional whitespace abutting a node to be enclosed by it.
 // In this example:
 //
-//              z := x + y // add them
-//                   <-A->
-//                  <----B----->
+//	z := x + y // add them
+//	     <-A->
+//	    <----B----->
 //
 // the ast.BinaryExpr(+) node is considered to enclose interval B
 // even though its [Pos()..End()) is actually only interval A.
@@ -41,10 +41,10 @@ import (
 // interior whitespace of path[0].
 // In this example:
 //
-//              z := x + y // add them
-//                <--C-->     <---E-->
-//                  ^
-//                  D
+//	z := x + y // add them
+//	  <--C-->     <---E-->
+//	    ^
+//	    D
 //
 // intervals C, D and E are inexact.  C is contained by the
 // z-assignment statement, because it spans three of its children (:=,
@@ -57,7 +57,6 @@ import (
 // Requires FileSet; see loader.tokenFileContainsPos.
 //
 // Postcondition: path is never nil; it always contains at least 'root'.
-//
 func PathEnclosingInterval(root *ast.File, start, end token.Pos) (path []ast.Node, exact bool) {
 	// fmt.Printf("EnclosingInterval %d %d\n", start, end) // debugging
 
@@ -160,7 +159,6 @@ func PathEnclosingInterval(root *ast.File, start, end token.Pos) (path []ast.Nod
 // tokenNode is a dummy implementation of ast.Node for a single token.
 // They are used transiently by PathEnclosingInterval but never escape
 // this package.
-//
 type tokenNode struct {
 	pos token.Pos
 	end token.Pos
@@ -181,7 +179,6 @@ func tok(pos token.Pos, len int) ast.Node {
 // childrenOf returns the direct non-nil children of ast.Node n.
 // It may include fake ast.Node implementations for bare tokens.
 // it is not safe to call (e.g.) ast.Walk on such nodes.
-//
 func childrenOf(n ast.Node) []ast.Node {
 	var children []ast.Node
 
@@ -478,7 +475,6 @@ func (sl byPos) Swap(i, j int) {
 // TODO(adonovan): in some cases (e.g. Field, FieldList, Ident,
 // StarExpr) we could be much more specific given the path to the AST
 // root.  Perhaps we should do that.
-//
 func NodeDescription(n ast.Node) string {
 	switch n := n.(type) {
 	case *ast.ArrayType:

@@ -49,8 +49,9 @@ func (fa *facade) IfaceEmpty() bool {
 // IfaceExplicitMethod returns the i'th explicitly declared method of interface fa for 0 <= i < fa.NumExplicitMethods().
 // The methods are ordered by their unique Id.
 // NOTE:
-//  Panic, if TypKind != Interface;
-//  The result's TypKind is Signature.
+//
+//	Panic, if TypKind != Interface;
+//	The result's TypKind is Signature.
 func (fa *facade) IfaceExplicitMethod(i int) Facade {
 	fn := fa.iface().ExplicitMethod(i)
 	return fa.mustGetFacadeByObj(fn)

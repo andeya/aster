@@ -44,7 +44,7 @@ type Options struct {
 //
 // Note that filename's directory influences which imports can be chosen,
 // so it is important that filename be accurate.
-// To process data ``as if'' it were in filename, pass the data as a non-nil src.
+// To process data “as if” it were in filename, pass the data as a non-nil src.
 func Process(filename string, src []byte, opt *Options) ([]byte, error) {
 	env := &fixEnv{GOPATH: build.Default.GOPATH, GOROOT: build.Default.GOROOT}
 	return process(filename, src, opt, env)
@@ -245,11 +245,11 @@ func cutSpace(b []byte) (before, middle, after []byte) {
 }
 
 // matchSpace reformats src to use the same space context as orig.
-// 1) If orig begins with blank lines, matchSpace inserts them at the beginning of src.
-// 2) matchSpace copies the indentation of the first non-blank line in orig
-//    to every non-blank line in src.
-// 3) matchSpace copies the trailing space from orig and uses it in place
-//   of src's trailing space.
+//  1. If orig begins with blank lines, matchSpace inserts them at the beginning of src.
+//  2. matchSpace copies the indentation of the first non-blank line in orig
+//     to every non-blank line in src.
+//  3. matchSpace copies the trailing space from orig and uses it in place
+//     of src's trailing space.
 func matchSpace(orig []byte, src []byte) []byte {
 	before, _, after := cutSpace(orig)
 	i := bytes.LastIndex(before, []byte{'\n'})

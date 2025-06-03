@@ -201,7 +201,6 @@ type Tags struct {
 // `json:"foo,omitempty". Here options is: ["omitempty"]
 // Options []string
 // }
-//
 type Tag = structtag.Tag
 
 func newTags(field *ast.Field) *Tags {
@@ -251,7 +250,8 @@ func (s *Tags) Keys() []string {
 
 // Set sets the given tag. If the tag key already exists it'll override it.
 // NOTE:
-//  Automatically call the Flush method.
+//
+//	Automatically call the Flush method.
 func (s *Tags) Set(tag *Tag) error {
 	err := s.tags.Set(tag)
 	if err == nil {
@@ -262,7 +262,8 @@ func (s *Tags) Set(tag *Tag) error {
 
 // Delete deletes the tag for the given keys.
 // NOTE:
-//  Automatically call the Flush method.
+//
+//	Automatically call the Flush method.
 func (s *Tags) Delete(keys ...string) {
 	s.tags.Delete(keys...)
 	s.Flush()
@@ -271,7 +272,8 @@ func (s *Tags) Delete(keys ...string) {
 // AddOptions adds the given option for the given key. If the option already
 // exists it doesn't add it again.
 // NOTE:
-//  Automatically call the Flush method.
+//
+//	Automatically call the Flush method.
 func (s *Tags) AddOptions(key string, options ...string) {
 	s.tags.AddOptions(key, options...)
 	s.Flush()
@@ -279,7 +281,8 @@ func (s *Tags) AddOptions(key string, options ...string) {
 
 // DeleteOptions deletes the given options for the given key.
 // NOTE:
-//  Automatically call the Flush method.
+//
+//	Automatically call the Flush method.
 func (s *Tags) DeleteOptions(key string, options ...string) {
 	s.tags.DeleteOptions(key, options...)
 	s.Flush()

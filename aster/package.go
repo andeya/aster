@@ -27,7 +27,6 @@ import (
 // for a single package.
 //
 // Not mutated once exposed via the API.
-//
 type PackageInfo struct {
 	prog                  *Program
 	Pkg                   *types.Package
@@ -81,7 +80,6 @@ func (p *PackageInfo) String() string {
 // exact is defined as for astutil.PathEnclosingInterval.
 //
 // The zero value is returned if not found.
-//
 func (p *PackageInfo) pathEnclosingInterval(start, end token.Pos) (file *loader.File, path []ast.Node, exact bool) {
 	for _, f := range p.loaderFiles {
 		if f.Pos() == token.NoPos {

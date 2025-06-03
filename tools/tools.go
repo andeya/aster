@@ -30,7 +30,8 @@ func MkdirAll(path string, perm ...os.FileMode) error {
 
 // WriteFile write file, and automatically creates the directory if necessary.
 // NOTE:
-//  If perm is empty, automatically determine the file permissions based on extension.
+//
+//	If perm is empty, automatically determine the file permissions based on extension.
 func WriteFile(filename string, data []byte, perm ...os.FileMode) error {
 	return goutil.WriteFile(filename, data, perm...)
 }
@@ -54,19 +55,20 @@ func ReplaceFile(fset *token.FileSet, node ast.Node, newCode string) error {
 
 // Options specifies options for processing files.
 //
-// type Options struct {
-// 	Fragment  bool // Accept fragment of a source file (no package statement)
-// 	AllErrors bool // Report all errors (not just the first 10 on different lines)
-// 	Comments  bool // Print comments (true if nil *Options provided)
-// 	TabIndent bool // Use tabs for indent (true if nil *Options provided)
-// 	TabWidth  int  // Tab width (8 if nil *Options provided)
-// 	FormatOnly bool // Disable the insertion and deletion of imports
-// }
+//	type Options struct {
+//		Fragment  bool // Accept fragment of a source file (no package statement)
+//		AllErrors bool // Report all errors (not just the first 10 on different lines)
+//		Comments  bool // Print comments (true if nil *Options provided)
+//		TabIndent bool // Use tabs for indent (true if nil *Options provided)
+//		TabWidth  int  // Tab width (8 if nil *Options provided)
+//		FormatOnly bool // Disable the insertion and deletion of imports
+//	}
 type Options = imports.Options
 
 // FormatFile formats and adjusts imports for the provided file, and rewrites it.
 // NOTE:
-//  If content is not empty, use it as new content, format it and overwriting the original file content.
+//
+//	If content is not empty, use it as new content, format it and overwriting the original file content.
 func FormatFile(filename string, content []byte, opt *Options) error {
 	return RewriteFile(filename, func(c []byte) ([]byte, error) {
 		if len(content) > 0 {
@@ -81,7 +83,7 @@ func FormatFile(filename string, content []byte, opt *Options) error {
 //
 // Note that filename's directory influences which imports can be chosen,
 // so it is important that filename be accurate.
-// To process data ``as if'' it were in filename, pass the data as a non-nil src.
+// To process data “as if” it were in filename, pass the data as a non-nil src.
 func Format(filename string, src interface{}, opt *Options) ([]byte, error) {
 	b, err := ReadSourceBytes(src)
 	if err != nil {
@@ -104,8 +106,9 @@ func ChangePkgName(code string, pkgname string) string {
 
 // PkgName get the package name of the code, file or directory.
 // NOTE:
-//  If src==nil, find the package name from the file or directory specified by 'filenameOrDirectory';
-//  If src!=nil, find the package name from the code represented by 'src'.
+//
+//	If src==nil, find the package name from the file or directory specified by 'filenameOrDirectory';
+//	If src!=nil, find the package name from the code represented by 'src'.
 func PkgName(filenameOrDirectory string, src interface{}) (string, error) {
 	if src == nil {
 		existed, isDir := goutil.FileExist(filenameOrDirectory)
