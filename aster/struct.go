@@ -41,10 +41,12 @@ func (fa *facade) structure() *types.Struct {
 			if tv.Type == t {
 				n, ok := expr.(*ast.StructType)
 				if !ok {
-					if a, ok := expr.(*ast.CompositeLit); ok {
-						if n, ok = a.Type.(*ast.StructType); !ok {
-							break
-						}
+					a, ok := expr.(*ast.CompositeLit)
+					if !ok {
+						break
+					}
+					if n, ok = a.Type.(*ast.StructType); !ok {
+						break
 					}
 				}
 				expandFields(n.Fields)

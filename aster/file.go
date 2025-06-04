@@ -12,7 +12,7 @@ type File struct {
 	Filename string
 	*ast.File
 	*PackageInfo
-	facade []*facade
+	facades []*facade
 }
 
 // CoverImport cover originImportPath with importPath

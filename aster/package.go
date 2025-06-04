@@ -56,7 +56,7 @@ func newPackageInfo(prog *Program, pkg *loader.PackageInfo) *PackageInfo {
 				Filename:    f.Filename,
 				File:        f.File,
 				PackageInfo: pkgInfo,
-				facade:      make([]*facade, 0),
+				facades:     make([]*facade, 0),
 			})
 		}
 	}

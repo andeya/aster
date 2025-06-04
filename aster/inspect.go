@@ -67,7 +67,7 @@ L:
 func (prog *Program) Inspect(fn func(Facade) bool) {
 	for _, pkg := range prog.InitialPackages() {
 		for _, file := range pkg.Files {
-			for _, fa := range file.facade {
+			for _, fa := range file.facades {
 				if !fn(fa) {
 					return
 				}
@@ -107,7 +107,7 @@ func (prog *Program) FindFacade(typ types.Type) (fa Facade, found bool) {
 // Inspect traverses facades in the package.
 func (p *PackageInfo) Inspect(fn func(Facade) bool) {
 	for _, file := range p.Files {
-		for _, fa := range file.facade {
+		for _, fa := range file.facades {
 			if !fn(fa) {
 				return
 			}
@@ -140,7 +140,7 @@ func (p *PackageInfo) FindFacade(typ types.Type) (fa Facade, found bool) {
 
 func (p *PackageInfo) getFacade(ident *ast.Ident) (facade *facade, idx int) {
 	for _, file := range p.Files {
-		for _, facade = range file.facade {
+		for _, facade = range file.facades {
 			if facade.ident == ident {
 				return
 			}
@@ -151,7 +151,7 @@ func (p *PackageInfo) getFacade(ident *ast.Ident) (facade *facade, idx int) {
 
 func (p *PackageInfo) getFacadeByObj(obj types.Object) (facade *facade, idx int) {
 	for _, file := range p.Files {
-		for _, facade = range file.facade {
+		for _, facade = range file.facades {
 			if facade.obj == obj {
 				return
 			}
@@ -162,7 +162,7 @@ func (p *PackageInfo) getFacadeByObj(obj types.Object) (facade *facade, idx int)
 
 func (p *PackageInfo) getFacadeByTyp(t types.Type) (facade *facade, idx int) {
 	for _, file := range p.Files {
-		for _, facade = range file.facade {
+		for _, facade = range file.facades {
 			if facade.obj.Type() == t || facade.typ() == t {
 				return
 			}
@@ -171,19 +171,11 @@ func (p *PackageInfo) getFacadeByTyp(t types.Type) (facade *facade, idx int) {
 	return nil, -1
 }
 
-func (p *PackageInfo) addFile(file *File) {
-	p.Files = append(p.Files, file)
-}
-
 func (p *PackageInfo) addFacade(file *loader.File, node ast.Node, ident *ast.Ident, obj types.Object) {
 	for _, f := range p.Files {
 		if f.File == file.File {
-			f.facade = append(f.facade, &facade{
-				file: &File{
-					Filename:    file.Filename,
-					File:        file.File,
-					PackageInfo: p,
-				},
+			f.facades = append(f.facades, &facade{
+				file:  f,
 				node:  node,
 				obj:   obj,
 				pkg:   p,
@@ -199,7 +191,7 @@ func (p *PackageInfo) removeFacade(ident *ast.Ident) {
 	for _, file := range p.Files {
 		newFacades := make([]*facade, 0)
 		find := false
-		for _, fa := range file.facade {
+		for _, fa := range file.facades {
 			if fa.ident == ident {
 				find = true
 				for i, comment := range file.Comments {
@@ -213,7 +205,7 @@ func (p *PackageInfo) removeFacade(ident *ast.Ident) {
 			newFacades = append(newFacades, fa)
 		}
 		if find {
-			file.facade = newFacades
+			file.facades = newFacades
 			return
 		}
 	}

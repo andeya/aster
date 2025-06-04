@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/andeya/aster/aster"
+	"github.com/stretchr/testify/assert"
 )
 
 var src = `// Package test for aster
@@ -52,26 +53,26 @@ func TestFilename(t *testing.T) {
 		}
 		return true
 	})
-	want, err = filepath.Abs("../_out/struct.go")
+
+	wantList := map[string]bool{"inspect1.go": true, "inspect2.go": true, "inspect3.go": true, "struct.go": true}
+	gotList := make(map[string]bool, 0)
+	prog, err = aster.LoadDirs("../_out/")
 	if err != nil {
 		t.Fatal(err)
 	}
-
-	prog, _ = aster.LoadDirs("../_out/")
 	prog.Inspect(func(fa aster.Facade) bool {
-		if fa.File().Filename != want {
-			t.Fatalf("want:%s, got:%s", want, fa.File().Filename)
-		}
+		gotList[filepath.Base(fa.File().Filename)] = true
 		return true
 	})
+	assert.Equal(t, wantList, gotList)
 
+	gotList = make(map[string]bool, 0)
 	prog, _ = aster.LoadPkgs("../_out/")
 	prog.Inspect(func(fa aster.Facade) bool {
-		if fa.File().Filename != want {
-			t.Fatalf("want:%s, got:%s", want, fa.File().Filename)
-		}
+		gotList[filepath.Base(fa.File().Filename)] = true
 		return true
 	})
+	assert.Equal(t, wantList, gotList)
 }
 
 func TestInspect(t *testing.T) {
@@ -90,7 +91,7 @@ func TestInspect(t *testing.T) {
 }
 
 func TestComment(t *testing.T) {
-	prog, _ := aster.LoadFile("../_out/inspect1.go", src)
+	prog, _ := aster.LoadFile("../_out/comment.go", src)
 	prog.Inspect(func(fa aster.Facade) bool {
 		succ := fa.SetDoc("aster: " + fa.Doc())
 		if succ {
@@ -107,7 +108,7 @@ func TestComment(t *testing.T) {
 		return true
 	})
 	codes, _ := prog.Format()
-	t.Log(codes["../_out/inspect1.go"])
+	t.Log(codes["../_out/comment.go"])
 }
 
 // func TestAlias(t *testing.T) {
