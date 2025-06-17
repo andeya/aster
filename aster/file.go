@@ -15,7 +15,7 @@ type File struct {
 	facades []*facade
 }
 
-// FindImportByPath find import alias by path, and return found result.
+// FindImportByPath find import alias by path, and return the first found result.
 func (f *File) FindImportByPath(importPath string) (alias string, found bool) {
 	importPath = validPkgPath(importPath)
 	for _, im := range f.Imports {
@@ -29,7 +29,7 @@ func (f *File) FindImportByPath(importPath string) (alias string, found bool) {
 	return "", false
 }
 
-// FindImportByAlias find import path by alias, and return found result.
+// FindImportByAlias find import path by alias, and return the first found result.
 func (f *File) FindImportByAlias(alias string) (importPath string, found bool) {
 	for _, im := range f.Imports {
 		if im.Name != nil && im.Name.Name == alias {
